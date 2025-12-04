@@ -3,19 +3,20 @@
 
 @section('content')
 <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-    <div class="bg-gradient-to-r from-red-700 to-red-900 text-white p-8">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+    <div class="bg-gradient-to-r from-red-700 to-red-900 text-white p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 md:gap-6">
             <div>
-                <h3 class="text-3xl font-bold">Data Warga Posyandu</h3>
-                <p class="opacity-90 mt-2">RW xx - Dusun Cipulir Estate, Cipadu Jaya, Larangan</p>
+                <h3 class="text-2xl md:text-3xl font-bold">Data Warga Posyandu</h3>
+                <p class="opacity-90 mt-1 text-sm md:text-base">RW xx - Dusun Cipulir Estate, Cipadu Jaya, Larangan</p>
             </div>
-            <button onclick="addWarga()" class="bg-yellow-400 hover:bg-yellow-500 text-red-900 font-bold py-4 px-8 rounded-xl text-lg shadow-lg transition transform hover:scale-105">
+            <button onclick="addWarga()"
+                    class="bg-yellow-400 hover:bg-yellow-500 text-red-900 font-bold py-2 px-4 md:py-3 md:px-6 rounded-md text-sm md:text-base shadow transition transform hover:scale-102">
                 + Tambah Warga
             </button>
         </div>
     </div>
 
-    <div class="p-8">
+    <div class="p-4 md:p-6">
         <div class="overflow-x-auto">
             <table id="wargaTable" class="table table-zebra w-full text-sm">
                 <thead class="bg-red-100 text-red-900">
@@ -40,76 +41,78 @@
 
 <!-- Modal DaisyUI -->
 <dialog id="wargaModal" class="modal">
-    <div class="modal-box w-11/12 max-w-4xl">
-        <h3 class="text-2xl font-bold mb-6" id="modalTitle">Tambah Warga Baru</h3>
-        <form id="wargaForm" class="space-y-6">
+    <div class="modal-box w-11/12 max-w-3xl p-4 md:p-6">
+        <div class="flex items-start justify-between">
+            <h3 class="text-xl md:text-2xl font-bold mb-2" id="modalTitle">Tambah Warga Baru</h3>
+            <button class="btn btn-sm btn-circle btn-ghost" onclick="wargaModal.close()">✕</button>
+        </div>
+
+        <form id="wargaForm" class="space-y-4">
             @csrf
             <input type="hidden" id="wargaId">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div>
-                    <label class="label font-semibold">NIK</label>
-                    <input type="text" name="nik" maxlength="16" class="input input-bordered w-full" required>
+                    <label class="label font-semibold text-sm">NIK</label>
+                    <input type="text" name="nik" maxlength="16" class="input input-bordered w-full input-sm" required>
                 </div>
                 <div>
-                    <label class="label font-semibold">Nama Lengkap</label>
-                    <input type="text" name="nama" class="input input-bordered w-full" required>
+                    <label class="label font-semibold text-sm">Nama Lengkap</label>
+                    <input type="text" name="nama" class="input input-bordered w-full input-sm" required>
                 </div>
                 <div>
-                    <label class="label font-semibold">Tanggal Lahir</label>
-                    <input type="date" name="tanggal_lahir" class="input input-bordered w-full" required>
+                    <label class="label font-semibold text-sm">Tanggal Lahir</label>
+                    <input type="date" name="tanggal_lahir" class="input input-bordered w-full input-sm" required>
                 </div>
                 <div>
-                    <label class="label font-semibold">Jenis Kelamin</label>
-                    <select name="jenis_kelamin" class="select select-bordered w-full" required>
+                    <label class="label font-semibold text-sm">Jenis Kelamin</label>
+                    <select name="jenis_kelamin" class="select select-bordered w-full select-sm" required>
                         <option value="">Pilih</option>
                         <option value="Laki-laki">Laki-laki</option>
                         <option value="Perempuan">Perempuan</option>
                     </select>
                 </div>
                 <div>
-                    <label class="label font-semibold">Dusun</label>
-                    <input type="text" name="dusun" class="input input-bordered w-full" required>
+                    <label class="label font-semibold text-sm">Dusun</label>
+                    <input type="text" name="dusun" class="input input-bordered w-full input-sm" required>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="label font-semibold">RT</label>
-                        <input type="text" name="rt" maxlength="3" class="input input-bordered w-full" required>
+                        <label class="label font-semibold text-sm">RT</label>
+                        <input type="text" name="rt" maxlength="3" class="input input-bordered w-full input-sm" required>
                     </div>
                     <div>
-                        <label class="label font-semibold">RW</label>
-                        <input type="text" name="rw" maxlength="3" class="input input-bordered w-full" required>
+                        <label class="label font-semibold text-sm">RW</label>
+                        <input type="text" name="rw" maxlength="3" class="input input-bordered w-full input-sm" required>
                     </div>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="label font-semibold">Alamat Lengkap</label>
-                    <textarea name="alamat" class="textarea textarea-bordered w-full" rows="2" required></textarea>
+                    <label class="label font-semibold text-sm">Alamat Lengkap</label>
+                    <textarea name="alamat" class="textarea textarea-bordered w-full textarea-sm" rows="2" required></textarea>
                 </div>
                 <div>
-                    <label class="label font-semibold">No. HP</label>
-                    <input type="text" name="no_hp" class="input input-bordered w-full">
+                    <label class="label font-semibold text-sm">No. HP</label>
+                    <input type="text" name="no_hp" class="input input-bordered w-full input-sm">
                 </div>
                 <div>
-                    <label class="label font-semibold">Status Nikah</label>
-                    <select name="status_nikah" class="select select-bordered w-full" required>
+                    <label class="label font-semibold text-sm">Status Nikah</label>
+                    <select name="status_nikah" class="select select-bordered w-full select-sm" required>
                         <option value="Menikah">Menikah</option>
                         <option value="Tidak Menikah">Tidak Menikah</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="label font-semibold">Pekerjaan</label>
-                    <input type="text" name="pekerjaan" class="input input-bordered w-full">
+                    <label class="label font-semibold text-sm">Pekerjaan</label>
+                    <input type="text" name="pekerjaan" class="input input-bordered w-full input-sm">
                 </div>
                 <div class="md:col-span-2">
-                    <label class="label font-semibold">
-                        <span class="label-text text-base">Catatan (opsional)</span>
-                    </label>
-                    <textarea name="catatan" class="textarea textarea-bordered w-full" rows="3" placeholder="Misal: Warga pindahan dari Jakarta, belum punya KTP baru, dll..."></textarea>
+                    <label class="label font-semibold text-sm">Catatan (opsional)</label>
+                    <textarea name="catatan" class="textarea textarea-bordered w-full textarea-sm" rows="3" placeholder="Misal: Warga pindahan..."></textarea>
                 </div>
             </div>
 
-            <div class="modal-action">
-                <button type="button" class="btn btn-ghost" onclick="wargaModal.close()">Batal</button>
-                <button type="submit" class="btn btn-lg bg-red-600 hover:bg-red-700 text-white border-none">
+            <div class="modal-action pt-2">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="wargaModal.close()">Batal</button>
+                <button type="submit" class="btn bg-red-600 hover:bg-red-700 text-white btn-sm">
                     Simpan Warga
                 </button>
             </div>
@@ -117,6 +120,86 @@
     </div>
 </dialog>
 @endsection
+
+@push('styles')
+<style>
+/* Compact style tweaks for warga table & modal */
+
+/* DataTables wrapper compact */
+#wargaTable_wrapper .dataTables_length,
+#wargaTable_wrapper .dataTables_filter {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+#wargaTable_wrapper .dataTables_length label,
+#wargaTable_wrapper .dataTables_filter label {
+    margin: 0;
+    font-size: 0.78rem;
+}
+
+#wargaTable_wrapper .dataTables_length select,
+#wargaTable_wrapper .dataTables_filter input {
+    font-size: 0.78rem;
+    padding: 0.18rem 0.4rem;
+    border-radius: 0.35rem;
+}
+
+/* table compact */
+#wargaTable { font-size: 0.78rem; }
+#wargaTable thead th {
+    padding: 6px 8px !important;
+    font-size: 0.78rem !important;
+}
+#wargaTable tbody td {
+    padding: 6px 8px !important;
+    line-height: 1.12 !important;
+    vertical-align: middle;
+}
+
+/* compact pagination/info */
+#wargaTable_wrapper .dataTables_paginate,
+#wargaTable_wrapper .dataTables_info,
+#wargaTable_wrapper .dataTables_length {
+    font-size: 0.78rem !important;
+}
+
+/* action buttons small */
+#wargaTable .btn,
+#wargaTable button {
+    font-size: 0.7rem !important;
+    padding: 5px 8px !important;
+    border-radius: 0.35rem !important;
+}
+
+/* spacing for header action button */
+.bg-yellow-400 { /* keep visual but slightly smaller on wide screens */
+    transition: transform .12s;
+}
+
+/* Modal compact */
+.modal-box.w-11\/12.max-w-3xl { max-width: 760px; padding: 0.75rem; }
+.modal .btn-sm { padding: 6px 8px; font-size: 0.78rem; }
+
+/* form inputs small */
+.input-sm, .select-sm, .textarea-sm {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.88rem;
+}
+
+/* ensure long text in catatan doesn't overflow */
+#wargaTable td { word-break: break-word; }
+
+/* responsive tweaks for very small screens */
+@media (max-width: 640px) {
+    #wargaTable thead th { font-size: 0.72rem; padding: 5px 6px !important; }
+    #wargaTable tbody td { font-size: 0.72rem; padding: 5px 6px !important; }
+    .modal-box.w-11\/12.max-w-3xl { padding: 0.5rem; }
+}
+</style>
+@endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -133,7 +216,7 @@
             processing: true,
             serverSide: false,
             ajax: '{{ route('warga.data') }}',
-            dom: '<"flex justify-between items-center mb-6"lf>rt<"flex justify-between items-center mt-6"ip>',
+            dom: '<"flex justify-between items-center mb-4"lf>rt<"flex justify-between items-center mt-4"ip>',
             language: { search: "Cari NIK / Nama:", processing: "Memuat data warga..." },
             columns: [
                 { data: 'nik' },
@@ -149,8 +232,10 @@
                     data: null,
                     className: 'text-center',
                     render: d => `
-                        <button onclick="editWarga(${d.id})" class="btn btn-warning btn-sm">Edit</button>
-                        <button onclick="deleteWarga(${d.id})" class="btn btn-error btn-sm ml-2">Hapus</button>
+                        <div class="flex gap-2 justify-center flex-wrap">
+                            <button onclick="editWarga(${d.id})" class="btn btn-warning btn-sm">Edit</button>
+                            <button onclick="deleteWarga(${d.id})" class="btn btn-error btn-sm ml-2">Hapus</button>
+                        </div>
                     `
                 }
             ],
@@ -171,22 +256,20 @@
         document.getElementById('modalTitle').textContent = 'Tambah Warga Baru';
         $('.text-red-500').remove(); // Hapus error lama
         $('.input-error, .select-error').removeClass('input-error select-error');
-        modal.showModal();
+        if (modal.showModal) modal.showModal(); else modal.classList.add('modal-open');
     }
 
     window.editWarga = function(id) {
         $.get('/warga/' + id, function(data) {
             $('#wargaId').val(data.id);
 
-            // INI YANG PALING PENTING — FORMAT ULANG TANGGAL JADI YYYY-MM-DD
             $('[name="nik"]').val(data.nik);
             $('[name="nama"]').val(data.nama);
-            
-            // TANGGAL LAHIR → PASTIKAN FORMAT YYYY-MM-DD
+
             if (data.tanggal_lahir) {
                 const tgl = new Date(data.tanggal_lahir);
-                const formatted = tgl.getFullYear() + '-' + 
-                                 String(tgl.getMonth() + 1).padStart(2, '0') + '-' + 
+                const formatted = tgl.getFullYear() + '-' +
+                                 String(tgl.getMonth() + 1).padStart(2, '0') + '-' +
                                  String(tgl.getDate()).padStart(2, '0');
                 $('[name="tanggal_lahir"]').val(formatted);
             } else {
@@ -205,11 +288,10 @@
 
             document.getElementById('modalTitle').textContent = 'Edit: ' + data.nama;
 
-            // Bersihkan error lama
             $('.text-red-500').remove();
             $('.input-error, .select-error').removeClass('input-error select-error');
 
-            modal.showModal();
+            if (modal.showModal) modal.showModal(); else modal.classList.add('modal-open');
         }).fail(function() {
             Swal.fire('Error', 'Gagal memuat data warga', 'error');
         });
@@ -237,7 +319,6 @@
         });
     }
 
-    // INI YANG PALING PENTING — TANGKAP ERROR VALIDASI DARI LARAVEL!
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         $('.text-red-500').remove();
@@ -255,7 +336,7 @@
             processData: false,
             contentType: false,
             success: function() {
-                modal.close();
+                if (modal.close) modal.close(); else modal.classList.remove('modal-open');
                 table.ajax.reload();
                 Swal.fire('Sukses!', 'Data warga tersimpan!', 'success');
             },

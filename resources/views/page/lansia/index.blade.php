@@ -25,6 +25,12 @@
 
     {{-- TABEL DATATABLES --}}
     <div class="p-8">
+        <div class="flex justify-end mb-4">
+            <a href="{{ route('lansia.exportSemua') }}"
+               class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700">
+                Export Excel Semua
+            </a>
+        </div>
         <div class="overflow-x-auto">
             <table id="lansiaTable" class="table table-zebra w-full">
                 <thead class="bg-emerald-100 text-emerald-900">
@@ -65,22 +71,19 @@
 
 @push('styles')
 <style>
-    /* Wrapper DataTables utk lansiaTable saja */
+    /* ================================
+       DATA TABLES WRAPPER (existing)
+       ================================ */
     #lansiaTable_wrapper .dataTables_length,
     #lansiaTable_wrapper .dataTables_filter {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.5rem; /* sedikit lebih rapat */
     }
 
-    #lansiaTable_wrapper .dataTables_length {
-        float: left;
-    }
-
-    #lansiaTable_wrapper .dataTables_filter {
-        float: right;
-    }
+    #lansiaTable_wrapper .dataTables_length { float: left; }
+    #lansiaTable_wrapper .dataTables_filter { float: right; }
 
     #lansiaTable_wrapper .dataTables_length label,
     #lansiaTable_wrapper .dataTables_filter label {
@@ -88,18 +91,20 @@
         align-items: center;
         gap: 0.5rem;
         margin: 0;
-        font-size: 0.875rem; /* biar agak compact */
+        font-size: 0.8125rem; /* 13px - lebih compact */
     }
 
     #lansiaTable_wrapper .dataTables_length select {
-        border-radius: 0.5rem;
-        padding: 0.15rem 0.4rem;
+        border-radius: 0.375rem;
+        padding: 0.12rem 0.35rem;
+        font-size: 0.78rem;
     }
 
     #lansiaTable_wrapper .dataTables_filter input {
         border: 1px solid #d1d5db;
-        border-radius: 0.5rem;
-        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        padding: 0.22rem 0.45rem;
+        font-size: 0.85rem;
     }
 
     /* Responsive: di layar kecil, jadikan 2 baris */
@@ -111,11 +116,133 @@
             justify-content: space-between;
         }
 
-        #lansiaTable_wrapper .dataTables_filter {
-            margin-top: 0.25rem;
-        }
+        #lansiaTable_wrapper .dataTables_filter { margin-top: 0.25rem; }
     }
 
+    /* ================================
+       COMPACT MODE — ukuran tabel & tombol
+       ================================ */
+
+    /* ukuran font tabel (compact) */
+    #lansiaTable {
+        font-size: 0.78rem; /* ~12.5px */
+    }
+
+    /* header th lebih kecil dan rapat */
+    #lansiaTable thead th {
+        padding: 6px 8px !important;
+        font-size: 0.78rem !important;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    /* cell lebih kompak */
+    #lansiaTable tbody td {
+        padding: 5px 8px !important;
+        line-height: 1.15 !important;
+        vertical-align: middle;
+    }
+
+    /* nomor baris & center cells */
+    #lansiaTable tbody td.text-center {
+        font-size: 0.78rem !important;
+    }
+
+    /* reduce height of DataTables processing/loading */
+    .dataTables_processing {
+        font-size: 0.85rem;
+    }
+
+    /* tombol di dalam tabel (aksi) — override tombol besar menjadi compact */
+    #lansiaTable .btn,
+    #lansiaTable button,
+    #lansiaTable a {
+        font-size: 0.72rem !important;
+        padding: 4px 8px !important;
+        border-radius: 0.375rem !important;
+        line-height: 1 !important;
+        min-width: 0 !important; /* jangan memaksa full width */
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        box-shadow: none !important;
+    }
+
+    /* tombol yang sering dibuat "rounded-xl" akan dipadatkan */
+    #lansiaTable .rounded-xl {
+        border-radius: 0.375rem !important;
+    }
+
+    /* tombol "Periksa" warna & compact */
+    #lansiaTable .btn-periksa,
+    #lansiaTable .btn-riwayat {
+        padding: 4px 7px !important;
+        font-weight: 600;
+    }
+
+    /* link export excel compact */
+    #lansiaTable a[title="Export Excel"],
+    #lansiaTable a[href*="export"] {
+        padding: 3px 7px !important;
+        font-size: 0.72rem !important;
+    }
+
+    /* kalau tombol membungkus (flex-wrap), beri jarak kecil */
+    #lansiaTable .flex.gap-2,
+    #lansiaTable .flex.gap-2 > * {
+        gap: 6px !important;
+    }
+
+    /* badge kecil */
+    #lansiaTable .badge,
+    #lansiaTable .badge-sm {
+        font-size: 0.68rem !important;
+        padding: 3px 6px !important;
+    }
+
+    /* column "Aksi" jangan lebar; biarkan konten memotong */
+    #lansiaTable td.whitespace-nowrap {
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* DataTables control kecil (pagination, length) */
+    #lansiaTable_wrapper .dataTables_paginate,
+    #lansiaTable_wrapper .dataTables_info,
+    #lansiaTable_wrapper .dataTables_length {
+        font-size: 0.78rem !important;
+    }
+
+    /* pagination button compact */
+    #lansiaTable_wrapper .paginate_button {
+        padding: 3px 6px !important;
+        margin: 0 2px !important;
+    }
+
+    /* ================================
+       MODAL (ukuran & scroll) — biar lebih compact
+       ================================ */
+    .modal-box.w-11\/12.max-w-6xl {
+        max-width: 1000px; /* agak mengecil dari 6xl */
+        width: 95%;
+        padding: 1rem 1.25rem;
+    }
+
+    #lansiaModal h3 {
+        font-size: 1.25rem; /* lebih kecil dari text-3xl */
+    }
+
+    /* isi modal scrollable tapi tidak terlalu lebar */
+    #lansiaModalBody { max-height: 75vh; overflow-y: auto; }
+
+    /* tombol close kecil */
+    .modal .btn-sm.btn-circle { width: 30px; height: 30px; font-size: 0.9rem; }
+
+    /* ================================
+       Checkbox / textarea (tetap ada dari mu)
+       ================================ */
     /* warna background ketika checked */
     .checkbox-primary:checked,
     .checkbox-primary:checked:hover {
@@ -126,30 +253,29 @@
     /* warna centang */
     .checkbox-primary:checked::before {
         color: white !important;
-        transform: scale(1.4); /* perbesar centang */
+        transform: scale(1.35);
     }
 
-    /* ukuran checkbox keseluruhan */
-    .checkbox.checkbox-lg {
-        width: 1.6rem;
-        height: 1.6rem;
-    }
+    /* ukuran checkbox keseluruhan (sedikit kecilkan) */
+    .checkbox.checkbox-lg { width: 1.35rem; height: 1.35rem; }
 
     /* Fix textarea putih-on-putih */
-    textarea {
-        color: #1f2937 !important; /* text-gray-800 */
-    }
-    textarea::placeholder {
-        color: #9ca3af !important; /* text-gray-400 */
-    }
+    textarea { color: #1f2937 !important; } /* text-gray-800 */
+    textarea::placeholder { color: #9ca3af !important; }
     /* Kalau tetap putih di mode dark (jika pakai) */
-    .dark textarea {
-        color: #e5e7eb !important;
-    }
+    .dark textarea { color: #e5e7eb !important; }
 
+    /* ================================
+       OPTIONAL: lebih compact untuk layar lebar (ultra-compact)
+       ================================ */
+    @media (min-width: 1280px) {
+        #lansiaTable { font-size: 0.73rem; }
+        #lansiaTable thead th { font-size: 0.73rem; padding: 5px 6px !important; }
+        #lansiaTable tbody td { padding: 4px 6px !important; }
+        #lansiaTable .btn { font-size: 0.68rem !important; padding: 3px 6px !important; }
+    }
 </style>
 @endpush
-
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -299,7 +425,7 @@
                                     Periksa
                                 </button>
                                 ${btnRiwayat}
-                                <a href="${urlExport}" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition text-sm">
+                                <a href="${urlExport}" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition text-sm">
                                     Export Excel
                                 </a>
                             </div>`;

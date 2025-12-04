@@ -31,6 +31,96 @@
     <style>
         body { font-family: 'Poppins', sans-serif; }
         .swal2-popup { font-family: 'Poppins', sans-serif !important; }
+
+        /* Tables: make rows slightly tighter and text smaller */
+        .table.table-zebra {
+            font-size: 0.875rem; /* 14px */
+        }
+        .table.table-zebra th, .table.table-zebra td {
+            padding: 0.45rem 0.6rem; /* reduce cell padding */
+            vertical-align: middle;
+        }
+
+        /* Table header: slightly smaller */
+        .table.table-zebra thead th {
+            font-size: 0.86rem;
+            padding: 0.5rem 0.65rem;
+        }
+
+        /* Reduce zebra stripe height visually */
+        .table.table-zebra tbody tr { line-height: 1.1; }
+
+        /* Buttons: smaller defaults for "dense" layout (non-destructive) */
+        .btn, button.btn {
+            padding: 0.38rem 0.7rem;
+            font-size: 0.88rem;
+            border-radius: 0.5rem;
+        }
+
+        /* Specific: large buttons used in forms/tables — reduce while keeping variant */
+        .btn.btn-lg, .btn-lg {
+            padding: 0.45rem 0.9rem;
+            font-size: 0.92rem;
+        }
+        .btn.btn-sm, .btn-sm {
+            padding: 0.28rem 0.5rem;
+            font-size: 0.78rem;
+        }
+
+        /* Reduce top header padding across pages for compact look */
+        .bg-gradient-to-r.p-6, .bg-gradient-to-r.p-8, .bg-gradient-to-r.p-4 {
+            padding: 0.75rem 1rem !important;
+        }
+
+        /* Modal boxes: slightly smaller max width & less padding */
+        .modal-box {
+            padding: 0.9rem !important;
+        }
+        .modal-box .text-3xl { font-size: 1.15rem !important; }
+
+        /* Dialog content scroll area */
+        .modal-box .max-h-screen { max-height: 70vh !important; }
+
+        /* Badges / small labels */
+        .badge, .badge-outline, .badge-success, .badge-warning, .badge-error {
+            font-size: 0.72rem;
+            padding: 0.2rem 0.45rem;
+        }
+
+        /* Inputs / selects / textarea: slightly smaller and less padding */
+        .input, .select, .textarea, .input-bordered, .select-bordered, .textarea-bordered {
+            padding: 0.42rem 0.6rem;
+            font-size: 0.9rem;
+        }
+
+        /* Reduce form heading sizes */
+        #ajaxForm h2, .modal-box h2, .modal-box h3 {
+            font-size: 1.05rem;
+        }
+
+        /* Card spacing reductions used in many blades */
+        .p-6, .p-8 {
+            padding: 0.75rem !important;
+        }
+
+        /* Utility: make action column content wrap tighter */
+        .whitespace-nowrap { white-space: nowrap; }
+        .text-center.whitespace-nowrap .btn { margin: 0 0.2rem; }
+
+        /* Small screens: even more compact */
+        @media (max-width: 768px) {
+            .table.table-zebra { font-size: 0.82rem; }
+            .btn { padding: 0.28rem 0.5rem; font-size: 0.82rem; }
+            .modal-box { padding: 0.7rem !important; }
+            .input, .select, .textarea { font-size: 0.82rem; padding: 0.32rem 0.45rem; }
+        }
+
+        /* Optional helper class: apply denser spacing to any container by adding .dense */
+        .dense .table.table-zebra th,
+        .dense .table.table-zebra td { padding: 0.35rem 0.45rem; }
+        .dense .btn { padding: 0.28rem 0.5rem; font-size: 0.82rem; }
+        .dense .input, .dense .select, .dense .textarea { padding: 0.32rem 0.45rem; font-size: 0.82rem; }
+
     </style>
 </head>
 

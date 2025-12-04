@@ -29,8 +29,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Logout
-    Route::post('/logout', [LoginController::class, 'logout'])
-        ->name('logout');
+
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
     // ===========================================
     // 1. DATA WARGA
@@ -57,7 +57,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{warga}/{periksa}', [PemeriksaanDewasaLansiaController::class, 'updateAjax'])->name('update.ajax');
         Route::delete('/{periksa}', [PemeriksaanDewasaLansiaController::class, 'destroyAjax'])->name('destroy.ajax');
         Route::get('/{warga}/riwayat', [PemeriksaanDewasaLansiaController::class, 'riwayat'])->name('riwayat');
-        Route::get('/{warga}/export-excel', [PemeriksaanDewasaLansiaController::class, 'exportKartuExcel'])->name('export');
+        Route::get('/{warga}/export-excel', [PemeriksaanDewasaLansiaController::class, 'exportKartuExcelSatuan'])->name('exportSatuan');
+        Route::get('/export-excel-all', [PemeriksaanDewasaLansiaController::class, 'exportKartuExcelSemua'])->name('exportSemua');
     });
 
     // ===========================================
@@ -72,7 +73,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{warga}/edit/{lansia}', [PemeriksaanLansiaController::class, 'edit'])->name('edit');
         Route::put('/{lansia}', [PemeriksaanLansiaController::class, 'update'])->name('update');
         Route::delete('/{lansia}', [PemeriksaanLansiaController::class, 'destroy'])->name('destroy');
-        Route::get('/{warga}/export-excel', [PemeriksaanLansiaController::class, 'exportLansiaExcel'])->name('export');
+        Route::get('/{warga}/export-excel', [PemeriksaanLansiaController::class, 'exportLansiaExcelSatuan'])->name('export');
+        Route::get('/export-excel-all', [PemeriksaanLansiaController::class, 'exportLansiaExcelSemua'])->name('exportSemua');
     });
 
     // ===========================================

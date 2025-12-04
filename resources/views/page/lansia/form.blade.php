@@ -205,30 +205,30 @@
         @php
             $skilasGroups = [
                 ['title' => 'Penurunan Kognitif', 'items' => [
-                    ['field' => 'orientasi_waktu_tempat', 'label' => 'Tidak tahu hari/tanggal/tahun atau tempat sekarang'],
-                    ['field' => 'mengulang_ketiga_kata', 'label' => 'Tidak bisa mengulang 3 kata yang baru diajarkan'],
+                    ['field' => 'orientasi_waktu_tempat', 'label' => 'Orientasi waktu dan tempat'],
+                    ['field' => 'mengulang_ketiga_kata', 'label' => 'Mengulang ketiga kata'],
                 ]],
                 ['title' => 'Keterbatasan Mobilisasi', 'items' => [
-                    ['field' => 'tes_berdiri_dari_kursi', 'label' => 'Tidak bisa berdiri dari kursi 5x dalam 10 detik'],
+                    ['field' => 'tes_berdiri_dari_kursi', 'label' => 'Tes Beridiri dari Kursi'],
                 ]],
                 ['title' => 'Malnutrisi', 'items' => [
-                    ['field' => 'bb_berkurang_3kg_dalam_3bulan', 'label' => 'Berat badan turun ≥3 kg dalam 3 bulan terakhir / pakaian jadi lebih longgar'],
-                    ['field' => 'hilang_nafsu_makan', 'label' => 'Nafsu makan sangat menurun / kesulitan makan'],
+                    ['field' => 'bb_berkurang_3kg_dalam_3bulan', 'label' => 'BB berkurang >3kg dalam 3 bulan terakhir atau pakaian jadi lebih longgar'],
+                    ['field' => 'hilang_nafsu_makan', 'label' => 'Hilang nafsu makan/kesulitan makan'],
                     ['field' => 'lla_kurang_21cm', 'label' => 'Lingkar lengan atas (LiLA) < 21 cm'],
                 ]],
                 ['title' => 'Gangguan Penglihatan', 'items' => [
-                    ['field' => 'masalah_pada_mata', 'label' => 'Ada keluhan penglihatan (sulit melihat jauh, membaca, penyakit mata, dsb)'],
-                    ['field' => 'tes_melihat', 'label' => 'Tidak bisa baca huruf kecil dengan kacamata'],
+                    ['field' => 'masalah_pada_mata', 'label' => 'Masalah pada mata (sulit lihat jauh, membaca, penyakit mata, sedang dalam pengobatan Hipertensi/diabetes)'],
+                    ['field' => 'tes_melihat', 'label' => 'Tes Melihat'],
                 ]],
                 ['title' => 'Gangguan Pendengaran', 'items' => [
-                    ['field' => 'tes_bisik', 'label' => 'Tidak bisa dengar bisikan dari 1 meter'],
+                    ['field' => 'tes_bisik', 'label' => 'Tes Bisik'],
                 ]],
                 ['title' => 'Gejala Depresi dalam 2 minggu terakhir', 'items' => [
-                    ['field' => 'perasaan_sedih_tertekan', 'label' => 'Sering merasa sedih, tertekan, atau putus asa'],
-                    ['field' => 'sedikit_minat_atau_kenikmatan', 'label' => 'Kehilangan minat atau kesenangan dalam hampir semua aktivitas'],
+                    ['field' => 'perasaan_sedih_tertekan', 'label' => 'Perasaan sedih, tertekan, atau putus asa'],
+                    ['field' => 'sedikit_minat_atau_kenikmatan', 'label' => 'Sedikit minat atau kesenangan dalam melakukan sesuatu'],
                 ]],
                 ['title' => 'Status Imunisasi', 'items' => [
-                    ['field' => 'imunisasi_covid', 'label' => 'Belum pernah vaksin COVID-19'],
+                    ['field' => 'imunisasi_covid', 'label' => 'Imunisasi COVID 19'],
                 ]],
             ];
         @endphp

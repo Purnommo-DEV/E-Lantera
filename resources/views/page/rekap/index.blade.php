@@ -3,21 +3,21 @@
 
 @section('content')
 <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-    <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-8">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+    <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-6">
             <div>
-                <h3 class="text-3xl font-bold">Rekap Pemeriksaan Bulanan</h3>
-                <p class="opacity-90 mt-2">POSYANDU TAMAN CIPULIR ESTATE</p>
+                <h3 class="text-xl md:text-2xl font-bold">Rekap Pemeriksaan Bulanan</h3>
+                <p class="opacity-90 mt-1 text-sm md:text-base">POSYANDU TAMAN CIPULIR ESTATE</p>
             </div>
             <div class="text-right">
-                <p class="text-2xl font-bold">{{ now()->translatedFormat('F Y') }}</p>
+                <p class="text-lg md:text-2xl font-bold">{{ now()->translatedFormat('F Y') }}</p>
             </div>
         </div>
     </div>
-    <div class="p-8">
+    <div class="p-4 md:p-6">
 
-        {{-- TOMBOL EXPORT UTAMA --}}
-        <div class="flex flex-col lg:flex-row justify-center items-center gap-6 mb-10">
+        {{-- TOMBOL EXPORT UTAMA (compact) --}}
+        <div class="flex flex-col lg:flex-row justify-center items-center gap-3 md:gap-6 mb-6">
 
             {{-- 1. Export Detail Per Bulan --}}
             <button id="btnExportBulanan"
@@ -34,7 +34,7 @@
             </button>
 
             {{-- 2. Export Format Kemenkes Tahap 1 (Tahunan) --}}
-            <div class="dropdown dropdown-hover">
+            <div class="dropdown dropdown-hover w-full lg:w-auto">
                 <div tabindex="0"
                      class="btn btn-error btn-lg shadow-lg flex items-center gap-3 text-white">
                     <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
@@ -45,17 +45,17 @@
                         <small class="opacity-90">PWS-KIA Tahap 1 (Wajib Lapor)</small>
                     </span>
                 </div>
-                <ul tabindex="0" class="dropdown-content menu p-4 shadow bg-base-100 rounded-box w-80 z-50">
-                    <li class="menu-title text-success font-bold text-lg">
+                <ul tabindex="0" class="dropdown-content menu p-3 shadow bg-base-100 rounded-box w-64 z-50">
+                    <li class="menu-title text-success font-semibold text-sm">
                         Pilih Tahun untuk Download:
                     </li>
                     @for($y = now()->year; $y >= 2023; $y--)
                         <li>
                             <a href="{{ route('rekap.tahunan.kemenkes') }}?tahun={{ $y }}"
                                target="_blank"
-                               class="flex justify-between items-center py-3 text-lg font-medium hover:bg-success hover:text-white transition">
+                               class="flex justify-between items-center py-2 text-sm font-medium hover:bg-success hover:text-white transition">
                                 <span>Tahun {{ $y }}</span>
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                           stroke-width="2"
                                           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -68,20 +68,20 @@
         </div>
 
         {{-- Tabel Rekap 12 Bulan Terakhir --}}
-        <div class="text-center mb-6">
-            <p class="text-lg font-medium text-gray-700">Menampilkan 12 bulan terakhir</p>
+        <div class="text-center mb-4">
+            <p class="text-sm md:text-base font-medium text-gray-700">Menampilkan 12 bulan terakhir</p>
         </div>
 
-        <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
-            <table id="rekapTable" class="table table-zebra w-full text-center">
+        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+            <table id="rekapTable" class="table table-zebra w-full text-center text-sm">
                 <thead class="bg-yellow-100 text-yellow-900">
                     <tr>
-                        <th class="w-12">#</th>
+                        <th class="w-10">#</th>
                         <th>Bulan</th>
                         <th>Pemeriksaan Dewasa</th>
                         <th>Pemeriksaan Lansia</th>
                         <th>Total</th>
-                        <th>Aksi</th>
+                        <th class="w-28">Aksi</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -90,18 +90,62 @@
     </div>
 </div>
 
-{{-- Modal Detail Bulanan --}}
+{{-- Modal Detail Bulanan (compact) --}}
 <dialog id="detailModal" class="modal">
-    <div class="modal-box w-11/12 max-w-7xl">
-        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-                onclick="detailModal.close()">X</button>
-        <h3 class="text-3xl font-bold mb-6 text-yellow-600">
+    <div class="modal-box w-11/12 max-w-6xl p-4 md:p-5">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick="detailModal.close()">✕</button>
+        <h3 class="text-xl md:text-2xl font-bold mb-3 text-yellow-600">
             Detail Pemeriksaan Bulan <span id="modalJudul"></span>
         </h3>
-        <div id="detailContent"></div>
+        <div id="detailContent" class="text-sm"></div>
     </div>
 </dialog>
 @endsection
+
+@push('styles')
+<style>
+/* Compact Rekap Bulanan tweaks */
+
+/* DataTables wrapper compact */
+#rekapTable_wrapper .dataTables_length,
+#rekapTable_wrapper .dataTables_filter {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+#rekapTable_wrapper .dataTables_length label,
+#rekapTable_wrapper .dataTables_filter label {
+    margin: 0;
+    font-size: 0.78rem;
+}
+#rekapTable_wrapper .dataTables_length select,
+#rekapTable_wrapper .dataTables_filter input {
+    font-size: 0.78rem;
+    padding: 0.18rem 0.4rem;
+    border-radius: 0.35rem;
+}
+
+/* table compact */
+#rekapTable { font-size: 0.82rem; }
+#rekapTable thead th { padding: 7px 8px !important; font-size: 0.82rem !important; }
+#rekapTable tbody td { padding: 6px 8px !important; line-height: 1.12 !important; vertical-align: middle; }
+
+/* action buttons small */
+#rekapTable .btn, #rekapTable button { font-size: 0.72rem !important; padding: 6px 8px !important; border-radius: 0.35rem !important; }
+
+/* modal compact */
+.modal-box.w-11\/12.max-w-6xl { max-width: 980px; padding: 0.8rem; }
+.loading.loading-spinner.loading-lg { width: 36px; height: 36px; }
+
+/* responsive */
+@media (max-width: 768px) {
+    #rekapTable thead th { font-size: 0.72rem; padding: 6px 6px !important; }
+    #rekapTable tbody td { font-size: 0.72rem; padding: 6px 6px !important; }
+    .btn { font-size: 0.78rem; padding: 0.4rem 0.6rem; }
+}
+</style>
+@endpush
 
 @push('scripts')
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
@@ -162,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .addClass('hover:scale-105 transition');
 
         $('#detailContent').html(
-            '<div class="text-center py-20">' +
+            '<div class="text-center py-8">' +
                 '<span class="loading loading-spinner loading-lg"></span>' +
             '</div>'
         );
@@ -173,9 +217,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(r => r.text())
-            .then(html => $('#detailContent').html(html));
+            .then(html => $('#detailContent').html(html))
+            .catch(() => $('#detailContent').html('<div class="text-center text-red-600 py-6">Gagal memuat detail.</div>'));
 
-        document.getElementById('detailModal').showModal();
+        const dlg = document.getElementById('detailModal');
+        if (dlg.showModal) dlg.showModal(); else dlg.classList.add('modal-open');
     });
 
     // Export Detail Per Bulan (format Kemenkes tahap 1 per bulan)
@@ -186,6 +232,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const url = `{{ route('rekap.bulanan.export') }}?tahun=${selectedTahun}&bulan=${selectedBulan}`;
         window.open(url, '_blank');
+    });
+
+    // Safety: close modal fallback
+    $(document).on('click', '.modal .btn-ghost', function() {
+        const dlg = $(this).closest('dialog')[0];
+        if (dlg && dlg.close) dlg.close(); else $(dlg).removeClass('modal-open');
     });
 });
 </script>
