@@ -293,8 +293,14 @@
             Batal
         </button>
         <button type="submit"
-                class="btn btn-primary btn-md md:btn-lg px-12 md:px-20 text-xl md:text-2xl font-bold">
-            {{ isset($periksa) ? 'UPDATE' : 'SIMPAN' }} HASIL
+                id="btnSubmit"
+                class="btn btn-primary btn-md md:btn-lg px-12 md:px-20 text-xl md:text-2xl font-bold flex items-center gap-3">
+            <span id="btnText">
+                {{ isset($periksa) ? 'UPDATE' : 'SIMPAN' }} HASIL
+            </span>
+
+            <!-- Spinner (hidden default) -->
+            <span id="btnSpinner" class="loading loading-spinner loading-md hidden"></span>
         </button>
     </div>
 </form>
@@ -307,6 +313,19 @@
 
     const tanggalLahirStr = "{{ $warga->tanggal_lahir ? $warga->tanggal_lahir->format('Y-m-d') : '2000-01-01' }}";
     const lahir = new Date(tanggalLahirStr);
+
+    document.getElementById('ajaxForm').addEventListener('submit', function () {
+        const btn = document.getElementById('btnSubmit');
+        const text = document.getElementById('btnText');
+        const spinner = document.getElementById('btnSpinner');
+
+        // Disable tombol
+        btn.disabled = true;
+
+        // Ganti teks + tampilkan spinner
+        text.textContent = 'Menyimpan...';
+        spinner.classList.remove('hidden');
+    });
 
     window.hitung = function () {
         try {

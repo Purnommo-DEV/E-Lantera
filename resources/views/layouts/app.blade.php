@@ -282,6 +282,23 @@
                     <span class="text-xs lg:text-sm">Rekap Bulanan</span>
                 </a>
             </li>
+            
+            {{-- REGISTER DEWASA & LANSIA --}}
+            <li>
+                <a href="{{ route('register.dewasa-lansia.index') }}"
+                   class="flex items-center space-x-4 px-5 py-3 rounded-xl transition-all
+                          {{ request()->routeIs('register.dewasa-lansia.*')
+                              ? 'bg-amber-400 text-emerald-950 font-semibold shadow-md'
+                              : 'hover:bg-emerald-700 hover:translate-x-1 hover:shadow' }}">
+
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                              d="M9 5h6m-6 4h6m-6 4h6m-7 6h8"/>
+                    </svg>
+
+                    <span class="text-xs lg:text-sm">Register Dewasa & Lansia</span>
+                </a>
+            </li>
 
         </ul>
     </nav>

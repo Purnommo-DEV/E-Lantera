@@ -242,6 +242,7 @@
         table = $('#dewasaTable').DataTable({
             processing: true,
             serverSide: false,
+            order:[],
             ajax: {
                 url: '{{ route("dewasa.data") }}',
                 dataSrc: function(json) {

@@ -37,7 +37,7 @@ class Warga extends Model
     public function pemeriksaanDewasaLansiaAll()
     {
         return $this->hasMany(PemeriksaanDewasaLansia::class, 'warga_id')
-                    ->orderBy('tanggal_periksa'); // urutkan kalau mau
+                    ->latest('tanggal_periksa');
     }
 
     // SEMUA WARGA

@@ -15,43 +15,59 @@ class WargaController extends Controller
     public function data()
     {
         $warga = Warga::select([
-            'id', 'nik', 'nama', 'tanggal_lahir', 'jenis_kelamin',
-            'alamat', 'dusun', 'rt', 'rw', 'no_hp', 'status_nikah', 'pekerjaan', 'catatan'
-        ])
-        ->get()
-        ->map(function ($w) {
-            $lahir = \Carbon\Carbon::parse($w->tanggal_lahir);
-            $diff  = $lahir->diff(now());
+                'id', 'nik', 'nama', 'tanggal_lahir', 'jenis_kelamin',
+                'alamat', 'dusun', 'rt', 'rw', 'no_hp', 'status_nikah', 'pekerjaan', 'catatan'
+            ])
+            ->orderByDesc('id') // 🔥 DATA TERBARU DI ATAS
+            ->get()
+            ->map(function ($w) {
 
-            $tahun = $diff->y;
-            $bulan = $diff->m;
+                $lahir = \Carbon\Carbon::parse($w->tanggal_lahir);
+                $diff  = $lahir->diff(now());
 
-            return [
-                'id'            => $w->id,
-                'nik'           => $w->nik ?: '-',
-                'nama'          => $w->nama,
-                'umur'          => $tahun > 0 ? "$tahun thn $bulan bln" : "$bulan bln",
-                'jenis_kelamin' => $w->jenis_kelamin,
-                'alamat'        => "Dusun {$w->dusun} RT {$w->rt}/RW {$w->rw}",
-                'no_hp'         => $w->no_hp ?: '-',
-                'status_nikah'  => $w->status_nikah,
-                'pekerjaan'     => $w->pekerjaan ?: '-',
-                'catatan'       => $w->catatan ? '<small class="text-gray-600 italic">Catatan: ' . \Illuminate\Support\Str::limit($w->catatan, 60) . '</small>' : '-',
-            ];
-        });
+                $tahun = $diff->y;
+                $bulan = $diff->m;
+
+                return [
+                    'id'            => $w->id,
+                    'nik'           => $w->nik ?: '-',
+                    'nama'          => $w->nama,
+                    'umur'          => $tahun > 0 ? "$tahun thn $bulan bln" : "$bulan bln",
+                    'jenis_kelamin' => $w->jenis_kelamin,
+                    'alamat'        => "Dusun {$w->dusun} RT {$w->rt}/RW {$w->rw}",
+                    'no_hp'         => $w->no_hp ?: '-',
+                    'status_nikah'  => $w->status_nikah,
+                    'pekerjaan'     => $w->pekerjaan ?: '-',
+                    'catatan'       => $w->catatan
+                        ? '<small class="text-gray-600 italic">Catatan: '
+                            . \Illuminate\Support\Str::limit($w->catatan, 60)
+                            . '</small>'
+                        : '-',
+                ];
+            });
 
         return response()->json(['data' => $warga]);
     }
 
-
     public function show($id)
     {
         $warga = Warga::findOrFail($id);
-        
-        // Pastikan tanggal_lahir adalah string date (bukan timestamp)
-        $warga->tanggal_lahir = $warga->tanggal_lahir; // atau $warga->tanggal_lahir->format('Y-m-d')
 
-        return response()->json($warga);
+        return response()->json([
+            'id'             => $warga->id,
+            'nik'            => $warga->nik,
+            'nama'           => $warga->nama,
+            'tanggal_lahir'  => optional($warga->tanggal_lahir)->format('Y-m-d'),
+            'jenis_kelamin'  => $warga->jenis_kelamin,
+            'dusun'          => $warga->dusun,
+            'rt'             => $warga->rt,
+            'rw'             => $warga->rw,
+            'alamat'         => $warga->alamat,
+            'no_hp'          => $warga->no_hp,
+            'status_nikah'   => $warga->status_nikah,
+            'pekerjaan'      => $warga->pekerjaan,
+            'catatan'        => $warga->catatan,
+        ]);
     }
 
     public function store(Request $request)

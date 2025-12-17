@@ -71,7 +71,7 @@
     @endif
 
     <div class="mt-6 text-right">
-        <button class="btn btn-ghost" onclick="document.getElementById('dewasaModal').close()">
+        <button class="btn btn-ghost" onclick="closeDewasaModal()">
             Tutup
         </button>
     </div>
@@ -327,11 +327,87 @@
         if (dlg.showModal) dlg.showModal(); else dlg.classList.add('modal-open');
     }
 
+    function hapusDariDetail(periksaId) {
+        Swal.fire({
+            title: 'Yakin hapus data?',
+            text: 'Data pemeriksaan ini akan dihapus permanen.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            $.ajax({
+                url: "{{ url('dewasa') }}/" + periksaId, // 🔥 SESUAI ROUTE
+                type: 'DELETE',
+                data: {
+                    _token: "{{ csrf_token() }}"
+                },
+                success: function (res) {
+                    Swal.fire('Berhasil', res.success, 'success');
+
+                    // 🔥 Tutup modal detail jika terbuka
+                    if (typeof closePeriksaDetail === 'function') {
+                        closePeriksaDetail();
+                    }
+
+                    // 🔥 Hapus baris tabel
+                    const btn = document.querySelector(
+                        `button[onclick="hapusDariDetail(${periksaId})"]`
+                    );
+                    const row = btn ? btn.closest('tr') : null;
+                    if (row) row.remove();
+
+                    // 🔥 Hapus dari map agar detail tidak bisa dibuka lagi
+                    if (window.riwayatMap) {
+                        delete window.riwayatMap[periksaId];
+                    }
+
+                    // 🔥 Jika tabel kosong → tampilkan pesan
+                    if ($('tbody tr').length === 0) {
+                        $('tbody').html(`
+                            <tr>
+                                <td colspan="8" class="text-center text-gray-500 py-10">
+                                    Belum ada riwayat pemeriksaan
+                                </td>
+                            </tr>
+                        `);
+                    }
+                },
+                error: function (xhr) {
+                    console.error(xhr);
+                    Swal.fire(
+                        'Gagal',
+                        xhr.responseJSON?.message ?? 'Data gagal dihapus',
+                        'error'
+                    );
+                }
+            });
+        });
+    }
+    
     function closePeriksaDetail() {
         const dlg = document.getElementById('periksaDetailModal');
         const body = document.getElementById('periksaDetailBody');
         body.innerHTML = '';
         if (dlg.close) dlg.close(); else dlg.classList.remove('modal-open');
     }
+
+    function closeDewasaModal() {
+        const modal = document.getElementById('dewasaModal');
+
+        // jika native <dialog>
+        if (modal && typeof modal.close === 'function') {
+            modal.close();
+        }
+        // jika DaisyUI modal
+        else if (modal) {
+            modal.classList.remove('modal-open');
+        }
+    }
+
 </script>
 

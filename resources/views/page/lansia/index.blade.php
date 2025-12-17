@@ -482,6 +482,50 @@
             });
         });
 
+        // ==================== KLIK TOMBOL HAPUS ====================
+        $(document).on('click', '.btn-hapus-periksa', function () {
+            const url = $(this).data('url');
+
+            Swal.fire({
+                title: 'Hapus data?',
+                text: 'Data pemeriksaan ini akan dihapus permanen!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: url,
+                        type: 'DELETE',
+                        data: {
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function () {
+                            tutupModal();
+                            table.ajax.reload(null, false);
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Sukses!',
+                                text: 'Data berhasil dihapus',
+                                timer: 1800,
+                                showConfirmButton: false
+                            });
+                        },
+                        error: function () {
+                            Swal.fire(
+                                'Gagal!',
+                                'Terjadi kesalahan saat menghapus data.',
+                                'error'
+                            );
+                        }
+                    });
+                }
+            });
+        });
+
         // ==================== SUBMIT FORM VIA AJAX ====================
         $(document).on('submit', '#ajaxForm', function (e) {
             e.preventDefault();

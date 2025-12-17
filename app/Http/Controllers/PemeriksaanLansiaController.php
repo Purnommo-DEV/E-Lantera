@@ -13,8 +13,11 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\RichText\RichText;
 use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class PemeriksaanLansiaController extends Controller
 {
@@ -82,7 +85,7 @@ class PemeriksaanLansiaController extends Controller
                 'umur'        => $umur,
 
                 'terakhir'    => $p
-                    ? Carbon::parse($p->tanggal_periksa)->translatedFormat('d F Y')
+                    ? Carbon::parse($p->tanggal_periksa)->format('d-m-Y')
                     : '<span class="text-red-600 font-bold">Belum pernah diperiksa</span>',
 
                 'aks_total_skor' => $p?->aks_total_skor ?? '-',
@@ -141,27 +144,33 @@ class PemeriksaanLansiaController extends Controller
 
     private function simpanData(Request $request, PemeriksaanLansia $lansia = null)
     {
-        $data = $request->all();
+        // ==================== AMBIL DATA DASAR (WHITELIST) ====================
+        $data = $request->only([
+            'tanggal_periksa',
+            // field lain NON checkbox jika ada
+        ]);
 
-        // === AKS: ambil semua checkbox yang dicentang ===
+        // ==================== AKS ====================
         $aksFields = [
             'bab_s0_tidak_terkendali', 'bab_s1_kadang_tak_terkendali',
             'bak_s0_tidak_terkendali_kateter', 'bak_s1_kadang_1x24jam', 'bak_s2_mandiri',
             'diri_s0_butuh_orang_lain', 'diri_s1_mandiri',
             'wc_s0_tergantung_lain', 'wc_s1_perlu_beberapa_bisa_sendiri', 'wc_s2_mandiri',
             'makan_s0_tidak_mampu', 'makan_s1_perlu_pemotongan', 'makan_s2_mandiri',
-            'bergerak_s0_tidak_mampu', 'bergerak_s1_butuh_2orang', 'bergerak_s2_butuh_1orang', 'bergerak_s3_mandiri',
-            'jalan_s0_tidak_mampu', 'jalan_s1_kursi_roda', 'jalan_s2_bantuan_1orang', 'jalan_s3_mandiri',
+            'bergerak_s0_tidak_mampu', 'bergerak_s1_butuh_2orang',
+            'bergerak_s2_butuh_1orang', 'bergerak_s3_mandiri',
+            'jalan_s0_tidak_mampu', 'jalan_s1_kursi_roda',
+            'jalan_s2_bantuan_1orang', 'jalan_s3_mandiri',
             'pakaian_s0_tergantung_lain', 'pakaian_s1_sebagian_dibantu', 'pakaian_s2_mandiri',
             'tangga_s0_tidak_mampu', 'tangga_s1_butuh_bantuan', 'tangga_s2_mandiri',
             'mandi_s0_tergantung_lain', 'mandi_s1_mandiri',
         ];
 
         foreach ($aksFields as $field) {
-            $data["aks_{$field}"] = $request->has("aks_{$field}");
+            $data["aks_{$field}"] = $request->has("aks_{$field}") ? 1 : 0;
         }
 
-        // === SKILAS: semua field skil_* ===
+        // ==================== SKIL ====================
         $skilFields = [
             'orientasi_waktu_tempat', 'mengulang_ketiga_kata', 'tes_berdiri_dari_kursi',
             'bb_berkurang_3kg_dalam_3bulan', 'hilang_nafsu_makan', 'lla_kurang_21cm',
@@ -170,28 +179,26 @@ class PemeriksaanLansiaController extends Controller
         ];
 
         foreach ($skilFields as $f) {
-            $data["skil_{$f}"] = $request->has("skil_{$f}");
+            $data["skil_{$f}"] = $request->has("skil_{$f}") ? 1 : 0;
         }
 
-        // Tes bisik khusus
-        $data['skil_tes_bisik'] = $request->has('skil_tes_bisik'); // Ya
-        $data['skil_tidak_dapat_dilakukan'] = $request->has('skil_tidak_dapat_dilakukan');
+        // ==================== KHUSUS ====================
+        $data['skil_tes_bisik'] = $request->has('skil_tes_bisik') ? 1 : 0;
+        $data['skil_tidak_dapat_dilakukan'] = $request->has('skil_tidak_dapat_dilakukan') ? 1 : 0;
 
-        // Tanggal periksa
-        $data['tanggal_periksa'] = $request->tanggal_periksa;
+        // ==================== CREATE vs UPDATE ====================
+        if ($lansia && $lansia->exists) {
+            // 🔥 UPDATE PASTI KE RECORD INI
+            $lansia->update($data);
+            return $lansia;
+        }
 
-        // Warga ID
+        // 🔥 CREATE (PASTI BARU)
         $data['warga_id'] = $request->warga_id;
 
-        // Simpan
-        if ($lansia) {
-            $lansia->update($data); // $data pasti array
-        } else {
-            $lansia = PemeriksaanLansia::create($data);
-        }
-
-        return $lansia;
+        return PemeriksaanLansia::create($data);
     }
+
 
     public function store(Request $request)
     {
@@ -250,25 +257,29 @@ class PemeriksaanLansiaController extends Controller
             ->setName('Calibri')        // bebas, bisa ganti
             ->setSize($fontSizeDefaultData);
 
-        // Helper untuk range kolom 2 huruf (AJ, AK, ..., AY)
-        $excelColumnRange = function (string $start, string $end): array {
-            $cols = [];
-            $current = $start;
-            while (true) {
-                $cols[] = $current;
-                if ($current === $end) {
-                    break;
-                }
-                $current++;
-            }
-            return $cols;
-        };
-
         // =====================================================================
         // 1. HEADER UTAMA & IDENTITAS AKS
         // =====================================================================
         $sheet->setCellValue('A1', 'Depan');
         $sheet->mergeCells('A1:AH1');
+
+        // LOGO
+        $logo = new Drawing();
+        $logo->setName('Logo');
+        $logo->setDescription('Logo Posyandu');
+        $logo->setPath(public_path('posyandu.png'));
+
+        $logo->setHeight(60);              // 🔥 JANGAN kegedean
+        $logo->setResizeProportional(true);
+
+        $logo->setCoordinates("K2");
+        $logo->setOffsetX(3);
+        $logo->setOffsetY(2);             // 🔥 sejajar teks
+
+        $logo->setWorksheet($sheet);
+
+        // penting: kolom jangan lebar
+        $sheet->getColumnDimension('K')->setWidth(6);
 
         // FONT
         $sheet->getStyle('A1:AH1')->getFont()
@@ -729,6 +740,24 @@ class PemeriksaanLansiaController extends Controller
         // =====================================================================
         $sheet->setCellValue('AJ1', 'Belakang');
         $sheet->mergeCells('AJ1:AY1');
+
+        // LOGO
+        $logo = new Drawing();
+        $logo->setName('Logo');
+        $logo->setDescription('Logo Posyandu');
+        $logo->setPath(public_path('posyandu.png'));
+
+        $logo->setHeight(60);              // 🔥 JANGAN kegedean
+        $logo->setResizeProportional(true);
+
+        $logo->setCoordinates("AM2");
+        $logo->setOffsetX(3);
+        $logo->setOffsetY(2);             // 🔥 sejajar teks
+
+        $logo->setWorksheet($sheet);
+
+        // penting: kolom jangan lebar
+        $sheet->getColumnDimension('K')->setWidth(6);
 
         // FONT
         $sheet->getStyle('AJ1:AY1')->getFont()
@@ -1204,6 +1233,18 @@ class PemeriksaanLansiaController extends Controller
         // =====================================================================
         // BARIS 22 → NOMOR KOLOM AKS + SKILAS
         // =====================================================================
+        $excelColumnRange = function (string $start, string $end): array {
+            $cols = [];
+            $current = $start;
+            while (true) {
+                $cols[] = $current;
+                if ($current === $end) {
+                    break;
+                }
+                $current++;
+            }
+            return $cols;
+        };
 
         // Kolom AKS: B–Z + AA–AH
         $aksCols = array_merge(
@@ -1266,6 +1307,18 @@ class PemeriksaanLansiaController extends Controller
 
         // Atur lebar pembatas
         $sheet->getColumnDimension('AI')->setWidth(2); // ubah sesuai kebutuhan
+        $sheet->getStyle("A16:AY22")
+            ->getFont()->setBold(true);
+
+        $sheet->getStyle("A16:AH22")
+            ->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THICK)
+            ->getColor()->setRGB('FFFFFF');
+
+        $sheet->getStyle("AI16:AY22")
+            ->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THICK)
+            ->getColor()->setRGB('FFFFFF');
 
         // Background hijau hanya sampai baris terakhir tabel
         $sheet->getStyle("AI1:AI{$lastRow}")->getFill()
@@ -1296,113 +1349,148 @@ class PemeriksaanLansiaController extends Controller
 
     public function exportLansiaExcelSemua()
     {
-        $wargas = Warga::with('pemeriksaanDewasaLansiaAll')
-            ->whereHas('pemeriksaanDewasaLansiaAll')
+        $wargas = Warga::with('pemeriksaanLansiaAll')
+            ->whereHas('pemeriksaanLansiaAll')
             ->get();
 
         if ($wargas->isEmpty()) {
-            abort(404, 'Belum ada data pemeriksaan');
+            abort(404, 'Belum ada data pemeriksaan lansia');
         }
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Kartu Dewasa');
+        $sheet->setTitle('Kartu Lansia AKS-SKILAS');
+
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri')->setSize(10);
+
+        $this->setColumnWidths($sheet);
 
         $offset = 0;
-        $jarakAntarKartu = 5; // baris kosong antar kartu
+        $jarakAntarKartu = 10;
 
         foreach ($wargas as $warga) {
-            $lastRow = $this->buildKartuSheetOffset($sheet, $warga, $offset);
+            $lastRow = $this->buildKartuLansiaOffset($sheet, $warga, $offset);
             $offset = $lastRow + $jarakAntarKartu;
         }
 
-        $filename = "Kartu_Pemeriksaan_Dewasa_Lansia_MULTI.xlsx";
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
+        $filename = "Kartu_Lansia_AKS_SKILAS_Semua_" . now()->format('Ymd_His') . ".xlsx";
 
         $writer = new Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
-    
-    protected function buildKartuSheetOffset(Worksheet $sheet, Warga $warga, int $offsetRow = 0): int
+
+    private function setColumnWidths($sheet)
     {
-        // helper untuk geser baris
-        $r = fn(int $n) => $n + $offsetRow;
+        $widths = [
+            'A' => 20, 'B' => 10, 'C' => 10, 'D' => 10, 'E' => 9, 'F' => 9, 'G' => 9, 'H' => 9, 'I' => 9,
+            'J' => 9, 'K' => 9, 'L' => 9, 'M' => 9, 'N' => 9, 'O' => 9, 'P' => 9, 'Q' => 9, 'R' => 9,
+            'S' => 9, 'T' => 9, 'U' => 9, 'V' => 9, 'W' => 9, 'X' => 9, 'Y' => 9, 'Z' => 9,
+            'AA' => 9, 'AB' => 9, 'AC' => 9, 'AD' => 9, 'AE' => 9, 'AF' => 14, 'AG' => 10, 'AH' => 10, 'AI' => 2,
+            'AJ' => 20, 'AK' => 12, 'AL' => 12, 'AM' => 12, 'AN' => 12, 'AO' => 12, 'AP' => 12,
+            'AQ' => 12, 'AR' => 12, 'AS' => 12, 'AT' => 12, 'AU' => 12, 'AV' => 12, 'AW' => 12,
+            'AX' => 15, 'AY' => 12,
+        ];
+        foreach ($widths as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
+        }
+    }
 
-        // ambil semua riwayat
-        $periksas = $warga->pemeriksaanDewasaLansiaAll;
+    protected function buildKartuLansiaOffset($sheet, Warga $warga, int $offsetRow = 0): int
+    {
+        $r = fn($n) => $n + $offsetRow;
 
+        $periksas = $warga->pemeriksaanLansiaAll;
         if ($periksas->isEmpty()) {
-            $sheet->setCellValue('A' . $r(2), 'Belum ada data pemeriksaan');
+            $sheet->setCellValue('A' . $r(2), 'Belum ada data pemeriksaan lansia');
             return $r(5);
         }
 
+        $fontSizeDefaultData = 10;
+        $fontSizeHeaderUtama = 16;
+        $fontSizeHeaderBlok = 14;
+        $fontSizeHeaderKecil = 11;
+        $fontSizeProfil = 11;
+        $fontSizeDepanBelakang = 9;
 
-        $fontSizeDefaultData   = 10; // ukuran teks umum (isi tabel, dll)
-        $fontSizeHeaderUtama   = 16; // judul paling atas (A2, A3)
-        $fontSizeHeaderBlok    = 14; // judul blok seperti "AKS", "SKILAS"
-        $fontSizeHeaderKecil   = 11; // subjudul / teks penjelasan di header
-        $fontSizeProfil        = 11; // subjudul / teks penjelasan di header
-        $fontSizeDepanBelakang = 9; // subjudul / teks penjelasan di header
-        // =====================================================================
-        // LEBAR KOLOM
-        // =====================================================================
-        $columnWidths = [
-            'A'  => 20,
-            'B'  => 10, 'C'  => 10, 'D'  => 10,
-            'E'  => 9,  'F'  => 9,  'G'  => 9,  'H'  => 9,  'I'  => 9,
-            'J'  => 9,  'K'  => 9,  'L'  => 9,  'M'  => 9,  'N'  => 9,
-            'O'  => 9,  'P'  => 9,  'Q'  => 9,  'R'  => 13,  'S'  => 13,
-            'T'  => 13, 'U'  => 13, 'V'  => 9,  'W'  => 9,  'X'  => 9,
-            'Y'  => 9,  'Z'  => 9,
-            'AA' => 13, 'AB' => 13, 'AC' => 9,
-            // kalau mau atur lebar SKILAS bisa tambah AI–AY di sini
-        ];
-        foreach ($columnWidths as $col => $width) {
-            $sheet->getColumnDimension($col)->setWidth($width);
-        }
+        $headerTopRow = $r(18);
+        $optionRowStart = $r(20);
+        $optionRowEnd = $r(21);
+        $aksFirstDataRow = $r(23);
 
-        $row1 = $r(1);
-        $row2 = $r(2);
-        $row3 = $r(3);
+        // ====================== HEADER DEPAN ======================
+        $sheet->setCellValue('A' . $r(1), 'Depan');
+        $sheet->mergeCells('A' . $r(1) . ':AH' . $r(1));
 
-        // =====================================================================
-        // 1. HEADER UTAMA & IDENTITAS AKS
-        // =====================================================================
+        // LOGO
+        $logo = new Drawing();
+        $logo->setName('Logo');
+        $logo->setDescription('Logo Posyandu');
+        $logo->setPath(public_path('posyandu.png'));
+
+        $logo->setHeight(60);              // 🔥 JANGAN kegedean
+        $logo->setResizeProportional(true);
+
+        $logo->setCoordinates("K" . $r(2));
+        $logo->setOffsetX(3);
+        $logo->setOffsetY(2);             // 🔥 sejajar teks
+
+        $logo->setWorksheet($sheet);
+
+        // penting: kolom jangan lebar
+        $sheet->getColumnDimension('K')->setWidth(6);
+
+        // FONT
+        $sheet->getStyle('A' . $r(1) . ':AH' . $r(1))->getFont()
+            ->setSize($fontSizeDepanBelakang)
+            ->setBold(true)
+            ->getColor()
+            ->setARGB('FFFFFFFF');
+        
+                // LOGO
+        $logo = new Drawing();
+        $logo->setName('Logo');
+        $logo->setDescription('Logo Posyandu');
+        $logo->setPath(public_path('posyandu.png'));
+
+        $logo->setHeight(60);              // 🔥 JANGAN kegedean
+        $logo->setResizeProportional(true);
+
+        $logo->setCoordinates('AM'.$r(2));
+        $logo->setOffsetX(3);
+        $logo->setOffsetY(2);             // 🔥 sejajar teks
+
+        $logo->setWorksheet($sheet);
+
+        // penting: kolom jangan lebar
+        $sheet->getColumnDimension('K')->setWidth(6);
 
         // ALIGNMENT
-        $sheet->getStyle("A$row1:AC$row1")->getAlignment()
+        $sheet->getStyle('A' . $r(1) . ':AH' . $r(1))->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER)
             ->setVertical(Alignment::VERTICAL_CENTER);
 
-        // ROW 1 background hijau
-        $sheet->getStyle("A{$row1}:AC{$row1}")->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setARGB('FF00B050'); // hijau 00B050
+        // BACKGROUND     
+        $sheet->getStyle('A' . $r(1) . ':AH' . $r(1))->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()
+            ->setARGB('FF00B050');
 
-        // ROW 2 — Judul besar
-        $sheet->setCellValue("A{$row2}", "KARTU BANTU PEMERIKSAAN LANSIA (≥60 Tahun)");
-        $sheet->mergeCells("A{$row2}:AC{$row2}");
-        $sheet->getStyle("A{$row2}:AC{$row2}")->getFont()
-            ->setSize($fontSizeHeaderUtama)
-            ->setBold(true);
-        $sheet->getStyle("A{$row2}:AC{$row2}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('A' . $r(2), 'KARTU BANTU PEMERIKSAAN LANSIA (≥60 Tahun)');
+        $sheet->mergeCells('A' . $r(2) . ':AH' . $r(2));
+        $sheet->getStyle('A' . $r(2) . ':AH' . $r(2))->getFont()->setSize($fontSizeHeaderUtama)->setBold(true);
+        $sheet->getStyle('A' . $r(2) . ':AH' . $r(2))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // ROW 3 — Subjudul
-        $sheet->setCellValue("A{$row3}", "POSYANDU TAMAN CIPULIR ESTATE");
-        $sheet->mergeCells("A{$row3}:AC{$row3}");
-        $sheet->getStyle("A{$row3}:AC{$row3}")->getFont()
-            ->setSize($fontSizeHeaderUtama)
-            ->setBold(true);
-        $sheet->getStyle("A{$row3}:AC{$row3}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('A' . $r(3), 'POSYANDU TAMAN CIPULIR ESTATE');
+        $sheet->mergeCells('A' . $r(3) . ':AH' . $r(3));
+        $sheet->getStyle('A' . $r(3) . ':AH' . $r(3))->getFont()->setSize($fontSizeHeaderUtama)->setBold(true);
+        $sheet->getStyle('A' . $r(3) . ':AH' . $r(3))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        
-
-        // Label identitas AKS
+        // ====================== IDENTITAS DEPAN ======================
         $labelsAKS = [
             'A5' => 'Nama',
             'A6' => 'NIK',
@@ -1416,679 +1504,714 @@ class PemeriksaanLansiaController extends Controller
             'A14' => 'Desa/Kelurahan/Nagari',
         ];
 
+
         foreach ($labelsAKS as $cell => $text) {
-            // ambil baris dari alamat sel, misal "A5" → 5
-            $rowLabel = preg_replace('/\D/', '', $cell);
+            $row = preg_replace('/\D/', '', $cell);
 
-            // merge A dan B per baris
-            $sheet->mergeCells("A{$rowLabel}:B{$rowLabel}");
-            $sheet->setCellValue("A{$rowLabel}", $text);
+            $row = $r($row);
+            $sheet->mergeCells("A{$row}:B{$row}");
+            $sheet->setCellValue("A{$row}", $text);
 
-            $sheet->getStyle("A{$rowLabel}:B{$rowLabel}")->getFont()
+            $sheet->getStyle("A{$row}:B{$row}")->getFont()
                 ->setSize($fontSizeProfil)
                 ->setBold(true);
-
-            $sheet->getStyle("A{$rowLabel}:B{$rowLabel}")->getAlignment()
+            
+            $sheet->getStyle("A{$row}:B{$row}")->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                 ->setVertical(Alignment::VERTICAL_CENTER)
                 ->setWrapText(true);
         }
 
-        $labelsB = [
-            'B5'  => ':',
-            'B6'  => ':',
-            'B7'  => ':',
-            'B8'  => ':',
-            'B9'  => ':',
-            'B10' => ':',
-            'B11' => ':',
-            'B12' => ':',
-            'B13' => ':',
-            'B14' => ':'
-        ];
+        foreach (range(5, 14) as $i) $sheet->setCellValue('C' . $r($i), ':');
 
-        foreach ($labelsB as $cell => $text) {
-            $col = preg_replace('/[0-9]/', '', $cell);
-            $row = (int) preg_replace('/\D/', '', $cell);
-            $row = $r($row);
-            $addr = $col . $row;
-
-            $sheet->setCellValue($addr, $text);
-            $style = $sheet->getStyle($addr);
-            $style->getFont()->setSize(12)->setBold(false);
-            $style->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        }
-
-        // ==================== ISI IDENTITAS ====================
         $dataIdentitas = [
-            5  => $warga->nama,
-            6  => $warga->nik,
-            7  => $warga->tanggal_lahir,
-            8  => $warga->alamat,
-            9  => $warga->no_hp,
+            5 => $warga->nama_lengkap ?? $warga->nama,
+            6 => $warga->nik,
+            7 => $warga->tanggal_lahir ? Carbon::parse($warga->tanggal_lahir)->translatedFormat('d F Y') : '-',
+            8 => $warga->alamat,
+            9 => $warga->no_hp,
             10 => $warga->status_nikah,
             11 => $warga->pekerjaan,
             12 => sprintf('%s/%s/%s', $warga->dusun ?? '-', $warga->rt ?? '-', $warga->rw ?? '-'),
             13 => $warga->kecamatan,
-            14 => $warga->desa
+            14 => $warga->desa,
         ];
-
-        foreach ($dataIdentitas as $row => $value) {
-            $sheet->setCellValue('C' . $r($row), $value ?? '-');
+        foreach ($dataIdentitas as $rowNum => $value) {
+            $row = $r($rowNum);
+            $sheet->mergeCells("D{$row}:F{$row}");
+            $sheet->setCellValue("D{$row}", $value ?? '-');
+            $sheet->getStyle("D{$row}:F{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
         }
 
-        // ==================== JENIS KELAMIN (RichText) ====================
-        $row5 = $r(5);
-        $row6 = $r(6);
-
+        // ==============================
+        // Jenis kelamin (dipindah ke G5)
+        // ==============================
         $jenisRaw = trim($warga->jenis_kelamin ?? '');
-        $richText = new RichText();
-        $richText->createTextRun('( ');
-        $textL = $richText->createTextRun('Laki-laki');
+        $rt = new RichText();
+        $rt->createTextRun('( ');
+        $tl = $rt->createTextRun('Laki-laki');
+        if (strcasecmp($jenisRaw, 'Laki-laki') === 0 || $jenisRaw === 'L') $tl->getFont()->getColor()->setARGB(Color::COLOR_RED);
+        $rt->createTextRun(' / ');
+        $tp = $rt->createTextRun('Perempuan');
+        if (strcasecmp($jenisRaw, 'Perempuan') === 0 || $jenisRaw === 'P') $tp->getFont()->getColor()->setARGB(Color::COLOR_RED);
+        $rt->createTextRun(' )');
+        $sheet->setCellValue('G' . $r(5), $rt);
+
+        // ==============================
+        // Umur (dipindah ke G6)
+        // ==============================
+        $tahun = $warga->tanggal_lahir ? Carbon::parse($warga->tanggal_lahir)->diff(now())->y : 0;
+        $sheet->setCellValue('G' . $r(6), "( {$tahun} Tahun )");
+
+        // ====================== RIWAYAT & PERILAKU ======================
+        $sheet->mergeCells('Q' . $r(5) . ':R' . $r(6));
+        $sheet->setCellValue('Q' . $r(5), "Riwayat Keluarga\n(lingkari jika ada)");
+        $sheet->getStyle('Q' . $r(5) . ':R' . $r(6))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+
+        $riwayatCols = [['S','T'],['U','V'],['W','X'],['Y','Z'],['AA','AB'],['AC','AD']];
+        $items = ['a. Hipertensi','b. DM','c. Stroke','d. Jantung','f. Kanker','g. Kolesterol Tinggi'];
+        foreach ($riwayatCols as $i => [$c1, $c2]) {
+            if (!isset($items[$i])) break;
+            $sheet->mergeCells("{$c1}" . $r(5) . ":{$c2}" . $r(5));
+            $sheet->setCellValue("{$c1}" . $r(5), $items[$i]);
+        }
+        $sheet->mergeCells('Q' . $r(7) . ':R' . $r(8));
+        $sheet->setCellValue('Q' . $r(7), "Riwayat Diri Sendiri\n(lingkari jika ada)");
+        foreach ($riwayatCols as $i => [$c1, $c2]) {
+            if (!isset($items[$i])) break;
+            $sheet->mergeCells("{$c1}" . $r(7) . ":{$c2}" . $r(7));
+            $sheet->setCellValue("{$c1}" . $r(7), $items[$i]);
+        }
+
+        $sheet->mergeCells('Q' . $r(9) . ':R' . $r(12));
+        $sheet->setCellValue('Q' . $r(9), "Perilaku Berisiko Diri Sendiri\n(lingkari jika ada)");
+        foreach ([9,10,11,12] as $n) $sheet->mergeCells('S' . $r($n) . ':V' . $r($n));
+        $sheet->setCellValue('S' . $r(9), "a. Merokok");
+        $sheet->setCellValue('S' . $r(10), "b. Konsumsi Tinggi Gula");
+        $sheet->setCellValue('S' . $r(11), "c. Konsumsi Tinggi Garam");
+        $sheet->setCellValue('S' . $r(12), "d. Konsumsi Tinggi Lemak");
+        foreach ([9,10,11,12] as $n) {
+            $sheet->mergeCells('Y' . $r($n) . ':Z' . $r($n));
+            $sheet->setCellValue('Y' . $r($n), ': Ya/Tidak');
+        }
+
+        $sheet->getStyle('Q' . $r(5) . ':AD' . $r(12))->getFont()->setSize($fontSizeHeaderKecil);
+        $sheet->getStyle('Q' . $r(5) . ':AD' . $r(12))->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+
+        // Langkah warna AF
+        foreach (range(5,9) as $i) {
+            $row = $r($i);
+            $sheet->setCellValue("AF{$row}", ': Disi langkah ' . ($i-4));
+            $colors = ['FFFCE2D2','FFFFE79B','FFFFFFCC','FFD7E1F3','FFCCCCFF'];
+            $sheet->getStyle("AF{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($colors[$i-5]);
+        }
+
+        $styleCenterWrap = function ($range) use ($sheet) {
+            $sheet->getStyle($range)->getAlignment()
+                ->setWrapText(true)
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+        };
+
+        // ====================== HEADER AKS ======================
+        $sheet->mergeCells("B" . $r(16).":AE" . $r(17));
+        $rtAks = new RichText();
+        $rtAks->createTextRun("Aktifitas Kehidupan Sehari-hari (AKS)")->getFont()->setBold(true)->setSize(14);
+        $rtAks->createTextRun("\n(Jika hasil perhitungan skor <20 atau termasuk kelompok Ringan, Sedang, Berat dan Total maka dilakukan rujuk ke Pustu/Puskesmas)")->getFont()->setSize($fontSizeHeaderKecil);
+        $sheet->setCellValue("B" . $r(16), $rtAks);
+        $sheet->getStyle("B" . $r(16).":AE" . $r(17))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle("B" . $r(16).":AE" . $r(17))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+        $sheet->mergeCells("A" . $r(16).":A{$optionRowEnd}");
+        $sheet->setCellValue("A" . $r(16), "Waktu ke\nPosyandu\n(tanggal/bulan/tahun)");
+        $sheet->getStyle("A" . $r(16).":A{$optionRowEnd}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $sheet->getStyle("A" . $r(16).":A{$optionRowEnd}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle("A" . $r(16).":A{$optionRowEnd}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFCE2D2');
+
+        // BAB
+        $sheet->mergeCells("B{$headerTopRow}:D" . $r(19));
+        $sheet->setCellValue("B{$headerTopRow}", "Mengendalikan rangsang Buang Air Besar (BAB)");
+        $styleCenterWrap("B{$headerTopRow}:D" . $r(19));
+
+        $sheet->mergeCells("B{$optionRowStart}:B{$optionRowEnd}"); $sheet->setCellValue("B{$optionRowStart}", "Skor 0\nTidak terkendali / tak teratur\n(perlu pencahar)");
+        $styleCenterWrap("B{$optionRowStart}:B{$optionRowEnd}");
+
+        $sheet->mergeCells("C{$optionRowStart}:C{$optionRowEnd}"); $sheet->setCellValue("C{$optionRowStart}", "Skor 1\nKadang-kadang tak terkendali\n(≥1x/minggu)");
+        $styleCenterWrap("C{$optionRowStart}:C{$optionRowEnd}");
+
+        $sheet->mergeCells("D{$optionRowStart}:D{$optionRowEnd}"); $sheet->setCellValue("D{$optionRowStart}", "Skor 2\nTerkendali & mandiri");
+        $styleCenterWrap("D{$optionRowStart}:D{$optionRowEnd}");
+
+        // BAK
+        $sheet->mergeCells("E{$headerTopRow}:G" . $r(19));
+        $sheet->setCellValue("E{$headerTopRow}", "Mengendalikan rangsang Buang Air Kecil (BAK)");
+        $styleCenterWrap("E{$headerTopRow}:G" . $r(19));
+
+        $sheet->mergeCells("E{$optionRowStart}:E{$optionRowEnd}");
+        $sheet->setCellValue("E{$optionRowStart}", "Skor 0\nTidak terkendali / pakai kateter");
+        $styleCenterWrap("E{$optionRowStart}:E{$optionRowEnd}");
+
+        $sheet->mergeCells("F{$optionRowStart}:F{$optionRowEnd}");
+        $sheet->setCellValue("F{$optionRowStart}", "Skor 1\nKadang-kadang tak terkendali\n(≥1x/24 jam)");
+        $styleCenterWrap("F{$optionRowStart}:F{$optionRowEnd}");
+
+        $sheet->mergeCells("G{$optionRowStart}:G{$optionRowEnd}");
+        $sheet->setCellValue("G{$optionRowStart}", "Skor 2\nTerkendali & mandiri");
+        $styleCenterWrap("G{$optionRowStart}:G{$optionRowEnd}");
+
+        // Membersihkan diri
+        $sheet->mergeCells("H{$headerTopRow}:I" . $r(19));
+        $sheet->setCellValue("H{$headerTopRow}", "Membersihkan diri\n(mencuci wajah, menyikat rambut, sikat gigi, dll)");
+        $styleCenterWrap("H{$headerTopRow}:I" . $r(19));
+
+        $sheet->mergeCells("H{$optionRowStart}:H{$optionRowEnd}");
+        $sheet->setCellValue("H{$optionRowStart}", "Skor 0\nButuh bantuan orang lain");
+        $styleCenterWrap("H{$optionRowStart}:H{$optionRowEnd}");
+
+        $sheet->mergeCells("I{$optionRowStart}:I{$optionRowEnd}");
+        $sheet->setCellValue("I{$optionRowStart}", "Skor 1\nMandiri");
+        $styleCenterWrap("I{$optionRowStart}:I{$optionRowEnd}");
+
+
+        // Ke WC
+        $sheet->mergeCells("J{$headerTopRow}:L" . $r(19));
+        $sheet->setCellValue("J{$headerTopRow}", "Penggunaan WC (keluar masuk WC, melepas/memakai celana, cebok, menyiram)");
+        $styleCenterWrap("J{$headerTopRow}:L" . $r(19));
+
+        foreach (['J'=>'Skor 0\nTergantung orang lain',
+                  'K'=>'Skor 1\nPerlu pertolongan pada beberapa kegiatan',
+                  'L'=>'Skor 2\nMandiri'] as $col => $text) {
+            $sheet->mergeCells("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+            $sheet->setCellValue("{$col}{$optionRowStart}", $text);
+            $styleCenterWrap("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+        }
+
+        // Makan
+        $sheet->mergeCells("M{$headerTopRow}:O" . $r(19));
+        $sheet->setCellValue("M{$headerTopRow}", "Makan minum\n(jika makan harus berupa potongan, dianggap dibantu)");
+        $styleCenterWrap("M{$headerTopRow}:O" . $r(19));
+
+        foreach (['M'=>'Skor 0\nTidak mampu',
+                  'N'=>'Skor 1\nPerlu bantuan (dipotong / disuapi)',
+                  'O'=>'Skor 2\nMandiri'] as $col => $text) {
+            $sheet->mergeCells("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+            $sheet->setCellValue("{$col}{$optionRowStart}", $text);
+            $styleCenterWrap("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+        }
+
+        // Bergerak
+        $sheet->mergeCells("P{$headerTopRow}:S" . $r(19));
+        $sheet->setCellValue("P{$headerTopRow}", "Bergerak dari kursi roda ke tempat tidur dan sebaliknya (termasuk duduk di tempat tidur)");
+        $styleCenterWrap("P{$headerTopRow}:S" . $r(19));
+
+        foreach ([
+            'P'=>'Skor 0\nTidak mampu',
+            'Q'=>'Skor 1\nButuh bantuan 2 orang',
+            'R'=>'Skor 2\nButuh bantuan 1 orang',
+            'S'=>'Skor 3\nMandiri'
+        ] as $col => $text) {
+            $sheet->mergeCells("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+            $sheet->setCellValue("{$col}{$optionRowStart}", $text);
+            $styleCenterWrap("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+        }
+
+        // Berjalan
+        $sheet->mergeCells("T{$headerTopRow}:W" . $r(19));
+        $sheet->setCellValue("T{$headerTopRow}", "Berjalan di tempat rata (atau jika tidak bisa berjalan, menjalankan kursi roda)");
+        $styleCenterWrap("T{$headerTopRow}:W" . $r(19));
+
+        foreach ([
+            'T' => "Skor 0\nTidak mampu",
+            'U' => "Skor 1\nHanya dengan kursi roda",
+            'V' => "Skor 2\nBerjalan dengan bantuan 1 orang",
+            'W' => "Skor 3\nMandiri (boleh pakai tongkat)",
+        ] as $col => $text) {
+            $sheet->mergeCells("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+            $sheet->setCellValue("{$col}{$optionRowStart}", $text);
+            $styleCenterWrap("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+        }
+
+        // Berpakaian
+        $sheet->mergeCells("X{$headerTopRow}:Z" . $r(19));
+        $sheet->setCellValue("X{$headerTopRow}", "Berpakaian (memakai baju, ikat sepatu, dsb)");
+        $styleCenterWrap("X{$headerTopRow}:Z" . $r(19));
+
+        foreach ([
+            'X' => "Skor 0\nTergantung orang lain",
+            'Y' => "Skor 1\nSebagian dibantu",
+            'Z' => "Skor 2\nMandiri",
+        ] as $col => $text) {
+            $sheet->mergeCells("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+            $sheet->setCellValue("{$col}{$optionRowStart}", $text);
+            $styleCenterWrap("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+        }
+
+        // Naik tangga
+        $sheet->mergeCells("AA{$headerTopRow}:AC" . $r(19));
+        $sheet->setCellValue("AA{$headerTopRow}", "Naik turun 1 lantai tangga");
+        $styleCenterWrap("AA{$headerTopRow}:AC" . $r(19));
+
+        foreach ([
+            'AA' => "Skor 0\nTidak mampu",
+            'AB' => "Skor 1\nButuh bantuan + pegangan",
+            'AC' => "Skor 2\nMandiri",
+        ] as $col => $text) {
+            $sheet->mergeCells("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+            $sheet->setCellValue("{$col}{$optionRowStart}", $text);
+            $styleCenterWrap("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+        }
+
+        // Mandi
+        $sheet->mergeCells("AD{$headerTopRow}:AE" . $r(19));
+        $sheet->setCellValue("AD{$headerTopRow}", "Mandi sendiri\n(masuk-keluar kamar mandi)");
+        $styleCenterWrap("AD{$headerTopRow}:AE" . $r(19));
+
+        foreach ([
+            'AD' => "Skor 0\nTergantung orang lain",
+            'AE' => "Skor 1\nMandiri",
+        ] as $col => $text) {
+            $sheet->mergeCells("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+            $sheet->setCellValue("{$col}{$optionRowStart}", $text);
+            $styleCenterWrap("{$col}{$optionRowStart}:{$col}{$optionRowEnd}");
+        }
+
+        // Tingkat ketergantungan
+
+        $sheet->mergeCells("AF".$r(16).":AF" . $r(19));
+        $sheet->setCellValue("AF".$r(16), "Tingkat Ketergantungan\n(M/R/S/B/T)");
+        $sheet->getStyle("AF".$r(16).":AF" . $r(19))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $sheet->getStyle("AF".$r(16).":AF" . $r(19))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->mergeCells("AF{$optionRowStart}:AF{$optionRowEnd}");
+        $sheet->setCellValue(
+            "AF{$optionRowStart}",
+            "Mandiri (M=20)\nRingan (R=12-19)\nSedang (S=9-11)\nBerat (B=5-8)\nTotal (T=0-4)"
+        );
+        $styleCenterWrap("AF{$optionRowStart}:AF{$optionRowEnd}");
+
+
+        // Edukasi & Rujuk AKS
+        $sheet->mergeCells("AG".$r(16).":AG{$optionRowEnd}");
+        $sheet->setCellValue("AG".$r(16), "Edukasi");
+        $styleCenterWrap("AG".$r(16).":AG{$optionRowEnd}");
+        $sheet->getStyle("AG".$r(16).":AG{$optionRowEnd}")
+            ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+        $sheet->mergeCells("AH".$r(16).":AH{$optionRowEnd}");
+        $sheet->setCellValue("AH".$r(16), "Rujuk\nPustu/Puskesmas");
+        $styleCenterWrap("AH".$r(16).":AH{$optionRowEnd}");
+        $sheet->getStyle("AH".$r(16).":AH{$optionRowEnd}")
+            ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+
+        // Warna header AKS
+        $colorHeader = 'FFD7E1F3';
+        $colorTanggal = 'FFFCE2D2';
+        $colorEdukasi  = 'FFCCCCFF';
+
+        $sheet->getStyle("A".$r(16).":A{$optionRowEnd}")
+            ->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB($colorTanggal);
+        $sheet->getStyle("AG".$r(16).":AG{$optionRowEnd}")
+            ->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB($colorEdukasi);
+
+        $headerRanges = [
+            'B'.$r(16).':AE'.$r(17), 'B'.$headerTopRow.':D'.$optionRowEnd, 'E'.$headerTopRow.':G'.$optionRowEnd,
+            'H'.$headerTopRow.':I'.$optionRowEnd, 'J'.$headerTopRow.':L'.$optionRowEnd, 'M'.$headerTopRow.':O'.$optionRowEnd,
+            'P'.$headerTopRow.':S'.$optionRowEnd, 'T'.$headerTopRow.':W'.$optionRowEnd, 'X'.$headerTopRow.':Z'.$optionRowEnd,
+            'AA'.$headerTopRow.':AC'.$optionRowEnd, 'AD'.$headerTopRow.':AE'.$optionRowEnd, 'AF'.$r(16).':AF'.$optionRowEnd,
+            'AH'.$r(16).':AH'.$optionRowEnd,
+        ];
+        foreach ($headerRanges as $range) {
+            $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($colorHeader);
+        }
+
+        // =====================================================================
+        // LEBAR KOLOM
+        // =====================================================================
+        $columnWidths = [
+            'A'  => 20,
+            'B'  => 10, 'C'  => 10, 'D'  => 10,
+            'E'  => 9,  'F'  => 9,  'G'  => 9,  'H'  => 9,  'I'  => 9,
+            'J'  => 9,  'K'  => 9,  'L'  => 9,  'M'  => 9,  'N'  => 9,
+            'O'  => 9,  'P'  => 9,  'Q'  => 9,  'R'  => 9,  'S'  => 9,
+            'T'  => 9,  'U'  => 9,  'V'  => 9,  'W'  => 9,  'X'  => 9,
+            'Y'  => 9,  'Z'  => 9,
+            'AA' => 9, 'AB' => 9, 'AC' => 9, 'AD' => 9, 'AE' => 9,
+            'AF' => 14, 'AG' => 10, 'AH' => 10,
+            // kalau mau atur lebar SKILAS bisa tambah AI–AY di sini
+        ];
+        foreach ($columnWidths as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
+        }
+
+        // Default row height untuk semua baris
+        $sheet->getDefaultRowDimension()->setRowHeight(22);
+
+        // Override untuk baris tertentu
+        $sheet->getRowDimension(17)->setRowHeight(40); // baris skor / judul tengah
+        $sheet->getRowDimension(20)->setRowHeight(70); // baris skor / judul tengah
+        $sheet->getRowDimension(21)->setRowHeight(60); // baris "Ya / Tidak" agar tidak terpotong
+
+
+        // =====================================================================
+        // 4. HEADER SKILAS — DIGESER 1 KOLOM KE KANAN (MULAI AJ)
+        // =====================================================================
+
+        // =====================================================================
+        // HEADER UTAMA & IDENTITAS SKILAS
+        // =====================================================================
+        $sheet->setCellValue('AJ' . $r(1), 'Belakang');
+        $sheet->mergeCells('AJ' . $r(1) . ':AY' . $r(1));
         
-        if (strcasecmp($jenisRaw, 'Laki-laki') === 0 || $jenisRaw === 'L') {
-            $textL->getFont()->getColor()->setARGB(Color::COLOR_RED);
+        // FONT
+        $sheet->getStyle('AJ' . $r(1) . ':AY' . $r(1))->getFont()
+            ->setSize($fontSizeDepanBelakang)
+            ->setBold(true)->getColor()->setARGB('FFFFFFFF');
+
+        // ALIGNMENT
+        $sheet->getStyle('AJ' . $r(1) . ':AY' . $r(1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('AJ' . $r(1) . ':AY' . $r(1))->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF00B050');
+
+        // BACKGROUND
+        $sheet->setCellValue('AJ' . $r(2), 'KARTU BANTU PEMERIKSAAN LANSIA (≥60 Tahun)');
+        $sheet->mergeCells('AJ' . $r(2) . ':AY' . $r(2));
+        $sheet->getStyle('AJ' . $r(2) . ':AY' . $r(2))->getFont()->setSize($fontSizeHeaderUtama)->setBold(true);
+        $sheet->getStyle('AJ' . $r(2) . ':AY' . $r(2))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('AJ' . $r(3), 'POSYANDU TAMAN CIPULIR ESTATE');
+        $sheet->mergeCells('AJ' . $r(3) . ':AY' . $r(3));
+        $sheet->getStyle('AJ' . $r(3) . ':AY' . $r(3))->getFont()->setSize($fontSizeHeaderUtama)->setBold(true);
+        $sheet->getStyle('AJ' . $r(3) . ':AY' . $r(3))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Identitas SKILAS
+        foreach ($labelsAKS as $cell => $text) {
+            $row = preg_replace('/\D/', '', $cell);
+            $row = $r($row);
+            $sheet->mergeCells("AJ{$row}:AL{$row}");
+            $sheet->setCellValue("AJ{$row}", $text);
+            $sheet->getStyle("AJ{$row}:AL{$row}")->getFont()->setSize($fontSizeProfil)->setBold(true);
         }
-
-        $richText->createTextRun(' / ');
-
-        $textP = $richText->createTextRun('Perempuan');
-        if (strcasecmp($jenisRaw, 'Perempuan') === 0 || $jenisRaw === 'P') {
-            $textP->getFont()->getColor()->setARGB(Color::COLOR_RED);
+        foreach (range(5,14) as $i) $sheet->setCellValue('AM' . $r($i), ':');
+        foreach ($dataIdentitas as $rowNum => $value) {
+            $row = $r($rowNum);
+            $sheet->mergeCells("AN{$row}:AP{$row}");
+            $sheet->setCellValue("AN{$row}", $value ?? '-');
         }
+        $sheet->setCellValue('AQ' . $r(5), $rt);
+        $sheet->setCellValue('AQ' . $r(6), "( {$tahun} Tahun )");
 
-        $richText->createTextRun(' )');
-        $sheet->setCellValue("D{$row5}", $richText);
+        // Header SKILAS
+        $sheet->mergeCells("AJ".$r(16).":AJ{$optionRowEnd}");
+        $sheet->setCellValue("AJ".$r(16), "Waktu ke\nPosyandu\n(tanggal/bulan/tahun)");
+        $sheet->getStyle("AJ".$r(16).":AJ{$optionRowEnd}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $sheet->getStyle("AJ".$r(16).":AJ{$optionRowEnd}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle("AJ".$r(16).":AJ{$optionRowEnd}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFCE2D2');
 
-        // ==================== UMUR ====================
-        $tahun = $warga->tanggal_lahir
-            ? helper_umur($warga->tanggal_lahir) : 0;
+        $sheet->mergeCells("AK".$r(16).":AV" . $r(17));
+        $rtSkilas = new RichText();
+        $rtSkilas->createTextRun("SKILAS - Skrining Risiko Lansia")->getFont()->setBold(true)->setSize(14);
+        $rtSkilas->createTextRun("\nJika terdapat 1 atau lebih jawaban 'YA' → Wajib rujuk ke Puskesmas / RS")->getFont()->setSize($fontSizeHeaderKecil);
+        $sheet->setCellValue("AK".$r(16), $rtSkilas);
+        $sheet->getStyle("AK".$r(16).":AV" . $r(17))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle("AJ".$r(16).":AY" . $r(17))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
-        $sheet->setCellValue("D{$row6}", "( {$tahun} Tahun )");
+        // Header kelompok SKILAS
+        $sheet->mergeCells("AK{$headerTopRow}:AL" . $r(19));
+        $sheet->setCellValue("AK{$headerTopRow}", "Penurunan Kognitif");
+        $styleCenterWrap("AK{$headerTopRow}:AL" . $r(19));
 
-        $sheet->getStyle("D{$row6}:D{$row6}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->mergeCells("AM{$headerTopRow}:AM" . $r(19));
+        $sheet->setCellValue("AM{$headerTopRow}", "Keterbatasan Mobilisasi");
+        $styleCenterWrap("AM{$headerTopRow}:AM" . $r(19));
 
-        // =====================================================================
-        // 2. BLOK RIWAYAT KELUARGA / DIRI
-        // =====================================================================
-        // ---------------- RIWAYAT KELUARGA ----------------
-        $sheet->mergeCells("Q{$row5}:R{$row6}");
-        $sheet->setCellValue("Q{$row5}", "Riwayat Keluarga\n(lingkari jika ada)");
-        $sheet->getStyle("Q{$row5}:R{$row6}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_TOP)
-            ->setWrapText(true);
+        $sheet->mergeCells("AN{$headerTopRow}:AP" . $r(19));
+        $sheet->setCellValue("AN{$headerTopRow}", "Malnutrisi");
+        $styleCenterWrap("AN{$headerTopRow}:AP" . $r(19));
 
-        $riwayatKeluargaItems = [
-            'a. Hipertensi',
-            'b. DM',
-            'c. Stroke',
-            'd. Jantung',
-            'f. Kanker',
-            'g. Kolesterol Tinggi',
-        ];
-        // S-T (TIDAK MERGE)
-        $sheet->setCellValue("S{$row5}", $riwayatKeluargaItems[0]);
-        $sheet->getStyle("S{$row5}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
+        $sheet->mergeCells("AQ{$headerTopRow}:AR" . $r(19));
+        $sheet->setCellValue("AQ{$headerTopRow}", "Gangguan Penglihatan");
+        $styleCenterWrap("AQ{$headerTopRow}:AR" . $r(19));
 
-        // U-V (TIDAK MERGE)
-        $sheet->setCellValue("T{$row5}", $riwayatKeluargaItems[1]);
-        $sheet->getStyle("T{$row5}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
+        $sheet->mergeCells("AS{$headerTopRow}:AT" . $r(19));
+        $sheet->setCellValue("AS{$headerTopRow}", "Gangguan Pendengaran");
+        $styleCenterWrap("AS{$headerTopRow}:AT" . $r(19));
 
-        // W-X (TIDAK MERGE)
-        $sheet->setCellValue("U{$row5}", $riwayatKeluargaItems[2]);
-        $sheet->getStyle("U{$row5}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
+        $sheet->mergeCells("AU{$headerTopRow}:AV" . $r(19));
+        $sheet->setCellValue(
+            "AU{$headerTopRow}",
+            "Gejala Depresi\n(dalam 2 minggu terakhir)"
+        );
+        $styleCenterWrap("AU{$headerTopRow}:AV" . $r(19));
 
-        // Y-Z (TIDAK MERGE)
-        $sheet->setCellValue("V{$row5}", $riwayatKeluargaItems[3]);
-        $sheet->getStyle("V{$row5}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
+        // Kolom tunggal sampai optionRowEnd
+        $sheet->mergeCells("AW{$headerTopRow}:AW{$optionRowEnd}");
+        $sheet->setCellValue("AW{$headerTopRow}", "Imunisasi COVID");
+        $styleCenterWrap("AW{$headerTopRow}:AW{$optionRowEnd}");
 
-        // AA-AB (TIDAK MERGE)
-        $sheet->setCellValue("W{$row5}", $riwayatKeluargaItems[4]);
-        $sheet->getStyle("W{$row5}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
+        $sheet->mergeCells("AX{$headerTopRow}:AX{$optionRowEnd}");
+        $sheet->setCellValue("AX{$headerTopRow}", "Edukasi");
+        $styleCenterWrap("AX{$headerTopRow}:AX{$optionRowEnd}");
 
-        // AC-AD (HANYA INI MERGE)
-        $sheet->mergeCells("X{$row5}:Y{$row5}");
-        $sheet->setCellValue("X{$row5}", $riwayatKeluargaItems[5]);
-        $sheet->getStyle("X{$row5}:Y{$row5}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-    
+        $sheet->mergeCells("AY{$headerTopRow}:AY{$optionRowEnd}");
+        $sheet->setCellValue("AY{$headerTopRow}", "Rujuk\nPustu/Puskesmas");
+        $styleCenterWrap("AY{$headerTopRow}:AY{$optionRowEnd}");
 
-
-        $row7 = $r(7);
-        $row8 = $r(8);
-
-        // ---------------- RIWAYAT DIRI SENDIRI ----------------
-        $sheet->mergeCells("Q{$row7}:R{$row8}");
-        $sheet->setCellValue("Q{$row7}", "Riwayat Diri Sendiri\n(lingkari jika ada)");
-        $sheet->getStyle("Q{$row7}:R{$row8}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_TOP)
-            ->setWrapText(true);
-
-        $riwayatDiriItems = [
-            'a. Hipertensi',
-            'b. DM',
-            'c. Stroke',
-            'd. Jantung',
-            'f. Kanker',
-            'g. Kolesterol Tinggi',
-        ];
-
-        // S-T (tidak merge)
-        $sheet->setCellValue("S{$row7}", $riwayatDiriItems[0]);
-        $sheet->getStyle("S{$row7}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        // U-V (tidak merge)
-        $sheet->setCellValue("T{$row7}", $riwayatDiriItems[1]);
-        $sheet->getStyle("T{$row7}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        // W-X (tidak merge)
-        $sheet->setCellValue("U{$row7}", $riwayatDiriItems[2]);
-        $sheet->getStyle("U{$row7}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        // Y-Z (tidak merge)
-        $sheet->setCellValue("V{$row7}", $riwayatDiriItems[3]);
-        $sheet->getStyle("V{$row7}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        // AA-AB (tidak merge)
-        $sheet->setCellValue("W{$row7}", $riwayatDiriItems[4]);
-        $sheet->getStyle("W{$row7}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        // AC-AD (HANYA INI MERGE)
-        $sheet->mergeCells("X{$row7}:Y{$row7}");
-        $sheet->setCellValue("X{$row7}", $riwayatDiriItems[5]);
-        $sheet->getStyle("X{$row7}:Y{$row7}")
-            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-
-        $row9  = $r(9);
-        $row10 = $r(10);
-        $row11 = $r(11);
-        $row12 = $r(12);
-
-        // ---------------- PERILAKU BERISIKO ----------------
-        $sheet->mergeCells("Q{$row9}:R{$row12}");
-        $sheet->setCellValue("Q{$row9}", "Perilaku Berisiko Diri Sendiri\n(lingkari jika ada)");
-        $sheet->getStyle("Q{$row9}:R{$row12}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_TOP)
-            ->setWrapText(true);
-
-        // merge isi perilaku (S–V)
-        foreach ([$row9, $row10, $row11, $row12] as $rowNum) {
-            $sheet->mergeCells("S{$rowNum}:V{$rowNum}");
-        }
-
-        // isi perilaku
-        $sheet->setCellValue("S{$row9}",  "a. Merokok");
-        $sheet->setCellValue("S{$row10}", "b. Konsumsi Tinggi Gula");
-        $sheet->setCellValue("S{$row11}", "c. Konsumsi Tinggi Garam");
-        $sheet->setCellValue("S{$row12}", "d. Konsumsi Tinggi Lemak");
-
-        $sheet->getStyle("S{$row9}:V{$row12}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_TOP)
-            ->setWrapText(true);
-
-        // YA/TIDAK: merge Y–Z
-        foreach ([$row9, $row10, $row11, $row12] as $rowNum) {
-            $sheet->mergeCells("Y{$rowNum}:Z{$rowNum}");
-        }
-
-
-        $sheet->setCellValue("Y{$row9}", ': Ya/Tidak');
-        $sheet->setCellValue("Y{$row10}", ': Ya/Tidak');
-        $sheet->setCellValue("Y{$row11}", ': Ya/Tidak');
-        $sheet->setCellValue("Y{$row12}", ': Ya/Tidak');
-
-        $sheet->getStyle("Y{$row9}:Z{$row12}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        // styling per area baru (font size header kecil sudah ada di $fontSizeHeaderKecil)
-        $sheet->getStyle("Q{$row5}:AD{$row12}")->getFont()->setSize($fontSizeHeaderKecil);
-        $sheet->getStyle("Q{$row5}:AD{$row12}")->getAlignment()
-            ->setVertical(Alignment::VERTICAL_TOP)
-            ->setWrapText(true);
-
-        // Langkah-langkah di AB-AC baris 8..12
-        $steps = [
-            ['AB','AC', 8,  ': Diisi langkah 1', 'FFFCE2D2'],
-            ['AB','AC', 9,  ': Diisi langkah 2', 'FFFFE79B'],
-            ['AB','AC', 10, ': Diisi langkah 3', 'FFFFFFCC'],
-            ['AB','AC', 11, ': Diisi langkah 4', 'FFD7E1F3'],
-            ['AB','AC', 12, ': Diisi langkah 5', 'FFCCCCFF'],
+        // Baris 20 & 21 SKILAS
+        $allSkilasHeaders = [
+            'AK' => 'Orientasi waktu / tempat',
+            'AL' => 'Mengulang 3 kata',
+            'AM' => 'Tes berdiri dari kursi',
+            'AN' => 'BB berkurang >3kg dalam  3 bulan terakhir atau pakaian jadi lebih longgar',
+            'AO' => 'Hilang nafsu makan / kesulitan makan',
+            'AP' => 'LiLA < 21 cm',
+            'AQ' => 'Masalah pada mata (sulit lihat jauh, membaca, penyakit mata, sedang dalam pengobatan Hipertensi/diabetes)',
+            'AR' => 'Tes melihat (huruf kecil)',
+            'AS' => 'Tes Bisik',  // akan di-merge dengan AT
+            'AT' => '',                     // kanan merge
+            'AU' => 'Perasaan sedih, tertekan, atau putus asa',
+            'AV' => 'Sedikit minat atau kesenangan dalam melakukan sesuatu',
+            'AW' => "Imunisasi COVID 19\nYa/Tidak",
+            'AX' => 'Catatan / edukasi',
+            'AY' => 'Rujuk Pustu/Puskesmas',
         ];
 
-        foreach ($steps as [$col1, $col2, $rowNum, $text, $color]) {
-            // ambil variabel baris yang sesuai, tapi jangan timpa $r (closure)
-            $targetRow = ${'row' . $rowNum};
+        // Baris 20 → judul indikator
+        foreach ($allSkilasHeaders as $col => $title) {
 
-            $sheet->mergeCells("{$col1}{$targetRow}:{$col2}{$targetRow}");
-            $sheet->setCellValue("{$col1}{$targetRow}", $text);
+            $range = null;
 
-            $sheet->getStyle("{$col1}{$targetRow}:{$col2}{$targetRow}")
-                ->getFill()->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setARGB($color);
+            // ===== CASE MERGE KHUSUS =====
+            if ($col === 'AS') {
+                $range = "AS{$optionRowStart}:AT{$optionRowStart}";
+                $sheet->mergeCells($range);
+                $sheet->setCellValue("AS{$optionRowStart}", $title);
 
-            $sheet->getStyle("{$col1}{$targetRow}:{$col2}{$targetRow}")
-                ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
+            } elseif (in_array($col, ['AW','AX','AY'])) {
+                $range = "{$col}{$r(16)}:{$col}{$optionRowStart}";
+                $sheet->mergeCells($range);
+                $sheet->setCellValue("{$col}{$r(16)}", $title);
+
+            } elseif ($col === 'AT') {
+                continue; // ikut merge AS
+
+            } else {
+                // ===== CASE NORMAL =====
+                $range = "{$col}{$optionRowStart}";
+                $sheet->setCellValue($range, $title);
+            }
+
+            // ===== STYLE UMUM (SATU PINTU) =====
+            if ($range) {
+                $style = $sheet->getStyle($range);
+
+                $style->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                    ->setVertical(Alignment::VERTICAL_CENTER)
+                    ->setWrapText(true);
+
+                $style->getBorders()->getAllBorders()
+                    ->setBorderStyle(Border::BORDER_THIN);
+            }
+        }
+
+        // Baris 21 → keterangan "Ya / Tidak" dll
+        foreach ($allSkilasHeaders as $col => $title) {
+            $range = $col . $optionRowEnd;
+
+            if (in_array($col, ['AX', 'AY'])) {
+                // kolom catatan & rujuk → biarkan kosong
+                $sheet->setCellValue($range, '');
+            } elseif ($col === 'AS') {
+                // Tes bisik → Ya/Tidak
+                $sheet->setCellValue($range, "Ya / Tidak");
+            } elseif ($col === 'AT') {
+                // Kolom sebelahnya → Tidak dapat dilakukan
+                $sheet->setCellValue($range, "Tidak dapat dilakukan");
+            } else {
+                // Kolom-kolom indikator lain → Ya/Tidak
+                $sheet->setCellValue($range, "Ya / Tidak");
+            }
+
+            // Styling semua kolom baris 21 (termasuk AT sekarang)
+            $sheet->getStyle($range)
+                ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)
                 ->setVertical(Alignment::VERTICAL_CENTER)
                 ->setWrapText(true);
+            $sheet->getStyle($range)->getFont()->setSize(10);
+            $sheet->getStyle($range)->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
         }
 
-        $sheet->getStyle("P{$row5}:AA{$row12}")->getFont()->setSize(11);
-        $sheet->getStyle("P{$row5}:AA{$row12}")->getAlignment()
-            ->setVertical(Alignment::VERTICAL_TOP)
-            ->setWrapText(true);
-
-
-        $row16 = $r(16); // Baris 16
-        $row17 = $r(17); // Baris 17
-        $row18 = $r(18); // Baris 18
-        $row19 = $r(19); // Baris 19
-        $row20 = $r(20); // Baris 20
-
-        // ==================== HEADER ATAS (TABEL) ====================
-        // judul Usia Dewasa dan Lansia
-        $sheet->setCellValue("A{$row16}", 'Usia Dewasa dan Lansia');
-        $sheet->mergeCells("A{$row16}:Z{$row16}");
-        $sheet->getStyle("A{$row16}:Z{$row16}")->getFont()->setSize(16)->setBold(true);
-        $sheet->getStyle("A{$row16}:Z{$row16}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle("A{$row16}:Z{$row16}")->getFill()
-            ->setFillType(Fill::FILL_SOLID);
-
-        // kolom A18
-        $sheet->mergeCells("A{$row18}:A{$row20}");
-        $sheet->setCellValue("A{$row18}", "Waktu ke\nPosyandu\n(tanggal/bulan/tahun)");
-        $sheet->getStyle("A{$row18}")->getFont()->setBold(true);
-        $sheet->getStyle("A{$row18}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        // header besar baris 17
-        $sheet->mergeCells("A{$row17}:N{$row17}");
-        $sheet->setCellValue("A{$row17}", "Hasil Penimbangan / Pengukuran / Pemeriksaan\n(Jika hasil pemeriksaan Tekanan Darah/Gula Darah tergolong tinggi maka dirujuk ke Pustu/Puskesmas)");
-        $sheet->getStyle("A{$row17}:N{$row17}")->getFont()->setBold(true)->setSize(11);
-        $sheet->getStyle("A{$row17}:N{$row17}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        $sheet->mergeCells("O{$row17}:V{$row17}");
-        $sheet->setCellValue("O{$row17}", "Kuesioner PPOK/PUMA (Skoring) ≥ 40 Tahun dan merokok\n(jika sasaran menjawab dengan score >6 , maka sasaran dirujuk ke Pustu/Puskesmas)");
-        $sheet->getStyle("O{$row17}:V{$row17}")->getFont()->setBold(true)->setSize(11);
-        $sheet->getStyle("O{$row17}:V{$row17}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        $sheet->mergeCells("W{$row17}:Z{$row17}");
-        $sheet->setCellValue("W{$row17}", 'Hasil Wawancara Faktor Risiko PM');
-        $sheet->getStyle("W{$row17}:Z{$row17}")->getFont()->setBold(true)->setSize(12);
-        $sheet->getStyle("W{$row17}:Z{$row17}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        $sheet->mergeCells("AA{$row16}:AA{$row20}");
-        $sheet->setCellValue("AA{$row16}", "Wawancara Usia Dewasa\nyang menggunakan Alat Kontrasepsi\n(Pil/Kondom/Lainnya)\n(Ya/Tidak)");
-        $sheet->getStyle("AA{$row16}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        $sheet->mergeCells("AB{$row16}:AB{$row20}");
-        $sheet->setCellValue("AB{$row16}", "Edukasi");
-        $sheet->getStyle("AB{$row16}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        $sheet->mergeCells("AC{$row16}:AC{$row20}");
-        $sheet->setCellValue("AC{$row16}", "Rujuk\nPustu/\nPuskesmas");
-        $sheet->getStyle("AC{$row16}")->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-            ->setVertical(Alignment::VERTICAL_CENTER)
-            ->setWrapText(true);
-
-        
-        // ==================== KOLOM PENIMBANGAN & PEMERIKSAAN (B–N) ====================
-        $sheet->mergeCells("B{$row18}:B{$row20}");
-        $sheet->setCellValue("B{$row18}", "Berat\nBadan\n(Kg)");
-
-        $sheet->mergeCells("C{$row18}:C{$row20}");
-        $sheet->setCellValue("C{$row18}", "Tinggi\nBadan\n(Cm)");
-
-        $sheet->mergeCells("D{$row18}:D{$row20}");
-        $sheet->setCellValue("D{$row18}", "IMT\nSangat Kurus (SK)/\nKurus (K)/\nNormal (N)/\nGemuk (G)/\nObesitas (O)");
-
-        $sheet->mergeCells("E{$row18}:E{$row20}");
-        $sheet->setCellValue("E{$row18}", "Lingkar\nPerut\n(Cm)");
-
-        $sheet->mergeCells("F{$row18}:F{$row20}");
-        $sheet->setCellValue("F{$row18}", "Lingkar\nLengan\nAtas\n(Cm)");
-
-        $sheet->mergeCells("G{$row18}:H{$row18}");
-        $sheet->setCellValue("G{$row18}", 'Tekanan Darah');
-
-        $sheet->mergeCells("G{$row19}:G{$row20}");
-        $sheet->setCellValue("G{$row19}", "Sistole/\nDiastole");
-
-        $sheet->mergeCells("H{$row19}:H{$row20}");
-        $sheet->setCellValue("H{$row19}", "Hasil\n(Rendah/\nNormal/\nTinggi)");
-
-        $sheet->mergeCells("I{$row18}:J{$row18}");
-        $sheet->setCellValue("I{$row18}", 'Gula Darah');
-
-        $sheet->mergeCells("I{$row19}:I{$row20}");
-        $sheet->setCellValue("I{$row19}", "Kadar\nGula Darah\nSewaktu\nmg/dL");
-
-        $sheet->mergeCells("J{$row19}:J{$row20}");
-        $sheet->setCellValue("J{$row19}", "Hasil\n(Rendah/\nNormal/\nTinggi)");
-
-        $sheet->mergeCells("K{$row18}:L{$row18}");
-        $sheet->setCellValue("K{$row18}", 'Tes Hitung Jari Tangan');
-        $sheet->setCellValue("K{$row19}", 'Mata Kanan');
-        $sheet->setCellValue("L{$row19}", 'Mata Kiri');
-        $sheet->setCellValue("K{$row20}", "Normal/\nGangguan");
-        $sheet->setCellValue("L{$row20}", "Normal/\nGangguan");
-
-        $sheet->mergeCells("M{$row18}:N{$row18}");
-        $sheet->setCellValue("M{$row18}", 'Tes Berbisik');
-        $sheet->setCellValue("M{$row19}", "Telinga\nKanan");
-        $sheet->setCellValue("N{$row19}", "Telinga\nKiri");
-        $sheet->setCellValue("M{$row20}", "Normal/\nGangguan");
-        $sheet->setCellValue("N{$row20}", "Normal/\nGangguan");
-
-        // ==================== KUESIONER PUMA (O–V) ====================
-        $sheet->setCellValue("O{$row18}", "Jenis\nKelamin");
-        $sheet->setCellValue("P{$row18}", "Usia");
-        $sheet->setCellValue("Q{$row18}", "Merokok");
-
-        $sheet->mergeCells("R{$row18}:R{$row20}");
-        $sheet->setCellValue("R{$row18}", "Apakah Anda sering merasa\nnapas pendek saat berjalan\ncepat di jalan datar atau\nsedikit menanjak?\n\n(Tidak = 0 | Ya = 5)");
-
-        $sheet->mergeCells("S{$row18}:S{$row20}");
-        $sheet->setCellValue("S{$row18}", "Apakah Anda sering\nmempunyai dahak dari paru\natau sulit mengeluarkan\ndahak saat tidak flu?\n\n(Tidak = 0 | Ya = 4)");
-
-        $sheet->mergeCells("T{$row18}:T{$row20}");
-        $sheet->setCellValue("T{$row18}", "Apakah Anda biasanya\nbatuk saat tidak sedang\nmenderita flu?\n\n(Tidak = 0 | Ya = 4)");
-
-        $sheet->mergeCells("U{$row18}:U{$row20}");
-        $sheet->setCellValue("U{$row18}", "Pernahkah dokter/tenaga\nkesehatan meminta Anda\nmeniup alat spirometri\natau peakflow meter?\n\n(Tidak = 0 | Ya = 5)");
-
-        $sheet->mergeCells("V{$row18}:V{$row20}");
-        $sheet->setCellValue("V{$row18}", "Skor\nPUMA");
-
-        $sheet->mergeCells("O{$row19}:O{$row20}");
-        $sheet->setCellValue("O{$row19}", "Pr = 0\nLk = 1");
-
-        $sheet->mergeCells("P{$row19}:P{$row20}");
-        $sheet->setCellValue("P{$row19}", "40-49 = 0\n50-59 = 1\n≥ 60 = 2");
-
-        $sheet->mergeCells("Q{$row19}:Q{$row20}");
-        $sheet->setCellValue("Q{$row19}", "Tidak = 0\n<20 Bks/Th = 0\n20-39 Bks/Th = 1\n≥40 Bks/Th = 2");
-
-        $sheet->setCellValue("R{$row20}", "Tidak = 0\nYa = 5");
-        $sheet->setCellValue("S{$row20}", "Tidak = 0\nYa = 4");
-        $sheet->setCellValue("T{$row20}", "Tidak = 0\nYa = 4");
-        $sheet->setCellValue("U{$row20}", "Tidak = 0\nYa = 5");
-
-        $sheet->mergeCells("V{$row19}:V{$row20}");
-        $sheet->setCellValue("V{$row19}", "< 6\n≥ 6");
-
-        // ==================== SKRINING TBC (W–Z) ====================
-        $sheet->mergeCells("W{$row18}:Z{$row18}");
-        $sheet->setCellValue("W{$row18}", 'Skrining Gejala TBC (jika 2 gejala terpenuhi maka dirujuk ke Puskesmas)');
-        $sheet->getStyle("W{$row18}:Z{$row18}")->getFont()->setBold(true);
-        $sheet->getStyle("W{$row18}:Z{$row18}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        $sheet->mergeCells("W{$row19}:W{$row20}");
-        $sheet->setCellValue("W{$row19}", "Batuk\nterus\nmenerus\n(Ya/Tidak)");
-
-        $sheet->mergeCells("X{$row19}:X{$row20}");
-        $sheet->setCellValue("X{$row19}", "Demam\nlebih dari\n2 minggu\n(Ya/Tidak)");
-
-        $sheet->mergeCells("Y{$row19}:Y{$row20}");
-        $sheet->setCellValue("Y{$row19}", "BB tidak\nnaik atau\nturun dalam\n2 bulan\n(Ya/Tidak)");
-
-        $sheet->mergeCells("Z{$row19}:Z{$row20}");
-        $sheet->setCellValue("Z{$row19}", "Kontak erat\ndengan\nPasien TBC\n(Ya/Tidak)");
-        
-
-        // ==================== ISI DATA RIWAYAT (mulai baris 21) ====================
-        $row21 = $r(21); //Baris 21
-        // =====================================================================
-        // BARIS 21 → NOMOR KOLOM BACKGROUND WARNA ABU2 (BFBFBF)
-        // =====================================================================
-        $iterator = $sheet->getColumnIterator('A', 'AC');
-
-        $noAks = 1;
-        foreach ($iterator as $column) {
-            $col = $column->getColumnIndex(); // A … Z
-            $sheet->setCellValue("{$col}{$row21}", $noAks++);
-        }
-
-        $sheet->getStyle("A{$row21}:AC{$row21}")->getAlignment()
+        // Merge kolom ringkasan (AY20–AY21)
+        $sheet->mergeCells("AY" . $optionRowStart . ":AY" . $optionRowEnd);
+        $sheet->getStyle("AY" . $optionRowStart . ":AY" . $optionRowEnd)->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER)
             ->setVertical(Alignment::VERTICAL_CENTER);
 
-        $sheet->getRowDimension(20)->setRowHeight(20);
-        $sheet->getStyle("A{$row21}:AC{$row21}")->getFont()->setBold(true);
+        // // Warna background
+        $colorSkilasHeader   = 'FFD7E1F3';
+        $colorTanggalSKILAS  = 'FFFCE2D2';
+        $colorEdukasiSKILAS  = 'FFCCCCFF';
 
-        $sheet->getStyle("A{$row21}:AC{$row21}")->getFill()
-            ->setFillType(Fill::FILL_SOLID)
-            ->getStartColor()->setARGB("FFBFBFBF");
+        $sheet->getStyle("AJ" . $optionRowStart . ":AJ" . $optionRowEnd)
+            ->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB($colorTanggalSKILAS);
+        $sheet->getStyle("AX" . $r(16) . ":AX" . $optionRowEnd)
+            ->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB($colorEdukasiSKILAS);
+
+        $headerRangesSKILAS = ['AK'.$r(16).':AL'.$optionRowEnd, 'AM'.$headerTopRow.':AM'.$optionRowEnd, 'AN'.$headerTopRow.':AP'.$optionRowEnd,
+                         'AQ'.$headerTopRow.':AR'.$optionRowEnd, 'AS'.$headerTopRow.':AT'.$optionRowEnd, 'AU'.$headerTopRow.':AV'.$optionRowEnd,
+                         'AW'.$r(16).':AW'.$optionRowEnd, 'AX'.$headerTopRow.':AX'.$optionRowEnd, 'AY'.$r(16).':AY'.$optionRowEnd];
+
+        foreach ($headerRangesSKILAS as $range) {
+            $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($colorSkilasHeader);
+        }
+
+        $sheet->getStyle("AX{$headerTopRow}:AX{$optionRowEnd}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFCCCCFF');
+
+        // ====================== ISI DATA ======================
+        $dataRow = $aksFirstDataRow;
+        foreach ($periksas as $periksa) {
+            $sheet->setCellValue("A{$dataRow}", Carbon::parse($periksa->tanggal_periksa)->format('d-m-Y'));
+
+            $aksMap = [
+                'B' => 'aks_bab_s0_tidak_terkendali', 'C' => 'aks_bab_s1_kadang_tak_terkendali', 'D' => 'aks_bab_s2_terkendali',
+                'E' => 'aks_bak_s0_tidak_terkendali_kateter', 'F' => 'aks_bak_s1_kadang_1x24jam', 'G' => 'aks_bak_s2_mandiri',
+                'H' => 'aks_diri_s0_butuh_orang_lain', 'I' => 'aks_diri_s1_mandiri',
+                'J' => 'aks_wc_s0_tergantung_lain', 'K' => 'aks_wc_s1_perlu_beberapa_bisa_sendiri', 'L' => 'aks_wc_s2_mandiri',
+                'M' => 'aks_makan_s0_tidak_mampu', 'N' => 'aks_makan_s1_perlu_pemotongan', 'O' => 'aks_makan_s2_mandiri',
+                'P' => 'aks_bergerak_s0_tidak_mampu', 'Q' => 'aks_bergerak_s1_butuh_2orang', 'R' => 'aks_bergerak_s2_butuh_1orang', 'S' => 'aks_bergerak_s3_mandiri',
+                'T' => 'aks_jalan_s0_tidak_mampu', 'U' => 'aks_jalan_s1_kursi_roda', 'V' => 'aks_jalan_s2_bantuan_1orang', 'W' => 'aks_jalan_s3_mandiri',
+                'X' => 'aks_pakaian_s0_tergantung_lain', 'Y' => 'aks_pakaian_s1_sebagian_dibantu', 'Z' => 'aks_pakaian_s2_mandiri',
+                'AA' => 'aks_tangga_s0_tidak_mampu', 'AB' => 'aks_tangga_s1_butuh_bantuan', 'AC' => 'aks_tangga_s2_mandiri',
+                'AD' => 'aks_mandi_s0_tergantung_lain', 'AE' => 'aks_mandi_s1_mandiri',
+            ];
+            foreach ($aksMap as $col => $field) {
+                $val = $periksa->{$field} ?? 0;
+                $sheet->setCellValue("{$col}{$dataRow}", $val ? 1 : '');
+            }
+            $sheet->setCellValue("AF{$dataRow}", $periksa->aks_kategori ?? '');
+            $sheet->setCellValue("AG{$dataRow}", $periksa->aks_edukasi ?? '');
+            $sheet->setCellValue("AH{$dataRow}", $periksa->aks_perlu_rujuk ? 'YA' : 'TIDAK');
+
+            $sheet->setCellValue("AJ{$dataRow}", Carbon::parse($periksa->tanggal_periksa)->format('d-m-Y'));
+
+            $skMap = [
+                'AK' => 'skil_orientasi_waktu_tempat', 'AL' => 'skil_mengulang_ketiga_kata', 'AM' => 'skil_tes_berdiri_dari_kursi',
+                'AN' => 'skil_bb_berkurang_3kg_dalam_3bulan', 'AO' => 'skil_hilang_nafsu_makan', 'AP' => 'skil_lla_kurang_21cm',
+                'AQ' => 'skil_masalah_pada_mata', 'AR' => 'skil_tes_melihat', 'AS' => 'skil_tes_bisik', 'AT' => 'skil_tidak_dapat_dilakukan',
+                'AU' => 'skil_perasaan_sedih_tertekan', 'AV' => 'skil_sedikit_minat_atau_kenikmatan', 'AW' => 'skil_imunisasi_covid',
+            ];
+            foreach ($skMap as $col => $field) {
+                $val = $periksa->{$field} ?? 0;
+                $sheet->setCellValue("{$col}{$dataRow}", $val ? 'Ya' : 'Tidak');
+            }
+            $sheet->setCellValue("AX{$dataRow}", $periksa->skil_edukasi ?? '');
+            $sheet->setCellValue("AY{$dataRow}", $periksa->skil_rujuk_otomatis ? 'Ya' : 'Tidak');
+
+            $dataRow++;
+        }
+
+        $lastDataRow = $dataRow - 1;
 
         // =====================================================================
-
-        $row22 = $r(22);
-
-        foreach ($periksas as $periksa) {
-            $sheet->setCellValue("A{$row22}", $periksa->tanggal_periksa ?? '-');
-
-            $imt = ($periksa->tinggi_badan > 0)
-                ? round($periksa->berat_badan / (($periksa->tinggi_badan / 100) ** 2), 2)
-                : 0;
-
-            $kategori = $imt < 17   ? 'SK'
-                      : ($imt < 18.5 ? 'K'
-                      : ($imt < 25   ? 'N'
-                      : ($imt < 30   ? 'G' : 'O')));
-
-            $sheet->setCellValue("B{$row22}", $periksa->berat_badan ?? '');
-            $sheet->setCellValue("C{$row22}", $periksa->tinggi_badan ?? '');
-            $sheet->setCellValue("D{$row22}", $kategori);
-            $sheet->setCellValue("E{$row22}", $periksa->lingkar_perut ?? '');
-            $sheet->setCellValue("F{$row22}", $periksa->lingkar_lengan_atas ?? '');
-            $sheet->setCellValue("G{$row22}", ($periksa->sistole ?? '').'/'.($periksa->diastole ?? ''));
-            $sheet->setCellValue(
-                "H{$row22}",
-                ($periksa->sistole >= 140 || $periksa->diastole >= 90) ? 'Tinggi' : 'Normal'
-            );
-            $sheet->setCellValue("I{$row22}", $periksa->gula_darah ?? '');
-            $sheet->setCellValue(
-                "J{$row22}",
-                $periksa->gula_darah > 200 ? 'Tinggi'
-                    : ($periksa->gula_darah < 70 ? 'Rendah' : 'Normal')
-            );
-            $sheet->setCellValue("K{$row22}", $periksa->mata_kanan ?? 'Normal');
-            $sheet->setCellValue("L{$row22}", $periksa->mata_kiri ?? 'Normal');
-            $sheet->setCellValue("M{$row22}", $periksa->telinga_kanan ?? 'Normal');
-            $sheet->setCellValue("N{$row22}", $periksa->telinga_kiri ?? 'Normal');
-
-            $jkSkor   = ($warga->jenis_kelamin === 'Laki-laki' || $warga->jenis_kelamin === 'L') ? 1 : 0;
-            $umur     = $warga->tanggal_lahir ? helper_umur($warga->tanggal_lahir) : 0;
-            $usiaSkor = $umur >= 60 ? 2 : ($umur >= 50 ? 1 : 0);
-
-            $merokokSkor = match ($periksa->merokok ?? 0) {
-                0 => 0,
-                1 => 0,
-                2 => 1,
-                3 => 2,
-                default => 0,
-            };
-
-            $q1 = ($periksa->puma_napas_pendek ?? 'Tidak') === 'Ya' ? 5 : 0;
-            $q2 = ($periksa->puma_dahak ?? 'Tidak')        === 'Ya' ? 4 : 0;
-            $q3 = ($periksa->puma_batuk ?? 'Tidak')        === 'Ya' ? 4 : 0;
-            $q4 = ($periksa->puma_tes_paru ?? 'Tidak')     === 'Ya' ? 5 : 0;
-
-            $totalPuma = $jkSkor + $usiaSkor + $merokokSkor + $q1 + $q2 + $q3 + $q4;
-
-            $sheet->setCellValue("O{$row22}", $jkSkor);
-            $sheet->setCellValue("P{$row22}", $usiaSkor);
-            $sheet->setCellValue("Q{$row22}", $merokokSkor);
-            $sheet->setCellValue("R{$row22}", $q1 ? 'Ya' : 'Tidak');
-            $sheet->setCellValue("S{$row22}", $q2 ? 'Ya' : 'Tidak');
-            $sheet->setCellValue("T{$row22}", $q3 ? 'Ya' : 'Tidak');
-            $sheet->setCellValue("U{$row22}", $q4 ? 'Ya' : 'Tidak');
-            $sheet->setCellValue("V{$row22}", $totalPuma >= 6 ? '≥ 6' : $totalPuma);
-
-            $sheet->setCellValue("W{$row22}", $periksa->tbc_batuk       ?? 'Tidak');
-            $sheet->setCellValue("X{$row22}", $periksa->tbc_demam       ?? 'Tidak');
-            $sheet->setCellValue("Y{$row22}", $periksa->tbc_bb_turun    ?? 'Tidak');
-            $sheet->setCellValue("Z{$row22}", $periksa->tbc_kontak_erat ?? 'Tidak');
-            $sheet->setCellValue("AA{$row22}", $periksa->kontrasepsi ?? '-');
-            $sheet->setCellValue("AB{$row22}", $periksa->edukasi     ?? '-');
-
-            $rujuk = [];
-            if (($periksa->sistole >= 140 || $periksa->diastole >= 90) || ($periksa->gula_darah > 200)) {
-                $rujuk[] = 'TD/Gula Darah Tinggi';
+        // BARIS 22 → NOMOR KOLOM AKS + SKILAS
+        // =====================================================================
+        $excelColumnRange = function (string $start, string $end): array {
+            $cols = [];
+            $current = $start;
+            while (true) {
+                $cols[] = $current;
+                if ($current === $end) {
+                    break;
+                }
+                $current++;
             }
-            if ($totalPuma > 6) {
-                $rujuk[] = 'Skor PUMA >6';
-            }
+            return $cols;
+        };
 
-            $gejalaTBC = collect([
-                $periksa->tbc_batuk,
-                $periksa->tbc_demam,
-                $periksa->tbc_bb_turun,
-                $periksa->tbc_kontak_erat,
-            ])->filter(fn($v) => $v === 'Ya')->count();
+        // Kolom AKS: B–Z + AA–AH
+        $aksCols = array_merge(
+            range('A', 'Z'),
+            $excelColumnRange('AA', 'AH')
+        );
 
-            if ($gejalaTBC >= 2) {
-                $rujuk[] = 'Suspek TBC';
-            }
+        // Kolom SKILAS: AJ–AY
+        $skilasCols = $excelColumnRange('AJ', 'AY');
 
-            if (!empty($rujuk)) {
-                $sheet->setCellValue("AC{$row22}", 'YA (' . implode(', ', $rujuk) . ')');
-                $sheet->getStyle("AC{$row22}")
-                    ->getFont()->setBold(true)->getColor()->setARGB('FFFF0000');
-            } else {
-                $sheet->setCellValue(
-                    "AC{$row22}",
-                    ($periksa->rujuk_puskesmas == 1 ? 'Ya' : 'Tidak')
-                );
-            }
-
-            $row22++;
+        $noAks = 1;
+        foreach ($aksCols as $col) {
+            $sheet->setCellValue("{$col}22", $noAks++);
         }
 
-        $lastRow = $row22 - 1;
-
-        // ==================== WARNA BACKGROUND & BORDER KARTU INI ====================
-        // ==================== WARNA BACKGROUND ====================
-        $fill = [
-            "A{$row18}:A{$row20}"   => "FFFCE2D2",
-            "B{$row18}:B{$row20}"   => "FFFFE79B",
-            "D{$row18}:D{$row20}"   => "FFFFFFCC",
-            "E{$row18}:E{$row20}"   => "FFFFE79B",
-            "G{$row18}:G{$row20}"   => "FFFFE79B",
-            "H{$row18}:H{$row20}"   => "FFFFE79B",
-
-            "I{$row18}:AA{$row20}"  => "FFD7E1F3",
-            "AA{$row16}:AA{$row20}" => "FFD7E1F3",
-            "AC{$row16}:AC{$row20}" => "FFD7E1F3",
-            "I{$row18}:N{$row20}"   => "FFD7E1F3",
-            "O{$row17}:V{$row20}"   => "FFD7E1F3",
-            "W{$row17}:Z{$row20}"   => "FFD7E1F3",
-
-            "AB{$row16}:AB{$row20}" => "FFCCCCFF",
-            "A{$row17}:N{$row17}"   => "FFD8D8D8",
-            "A{$row16}:Z{$row16}"   => "FFD8D8D8",
-
-            "F{$row17}:F{$row20}"   => "FFFFE79B",
-            "C{$row17}:C{$row20}"   => "FFFFE79B",
-        ];
-
-        foreach ($fill as $range => $color) {
-            $sheet->getStyle($range)
-                ->getFill()->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setARGB($color);
+        // --- Nomor kolom SKILAS (mulai 1 lagi) ---
+        $noSkilas = 1;
+        foreach ($skilasCols as $col) {
+            $sheet->setCellValue("{$col}22", $noSkilas++);
         }
+        
+        // Style header nomor kolom (row 22)
+        $styleHeaderNo = $sheet->getStyle("A" . $r(22) . ":AY" . $r(22));
+        $styleHeaderNo->getFont()->setBold(true);
+        $styleHeaderNo->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // ==================== STYLING UMUM ====================
-        $sheet->getStyle("A{$row18}:AC{$row20}")
+        // Background abu-abu
+        $sheet->getStyle("A" . $r(22) . ":AH" . $r(22))
+            ->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFBFBFBF');
+
+        $sheet->getStyle("AJ" . $r(22) . ":AY" . $r(22))
+            ->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFBFBFBF');
+
+        // =====================================================================
+        // 6. STYLING AKHIR
+        // =====================================================================
+        $sheet->getStyle("A{$headerTopRow}:AY{$lastDataRow}")
+            ->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THIN);
+
+        $sheet->getStyle("A".$r(16).":AY".$r(22))
             ->getFont()->setBold(true);
 
-        $sheet->getStyle("A{$row16}:AC{$row21}")
+        $sheet->getStyle("A".$r(16).":AH".$r(22))
             ->getBorders()->getAllBorders()
             ->setBorderStyle(Border::BORDER_THICK)
             ->getColor()->setRGB('FFFFFF');
 
-        $sheet->getStyle("A{$row21}:AC{$lastRow}")
+        $sheet->getStyle("AI".$r(16).":AY".$r(22))
             ->getBorders()->getAllBorders()
-            ->setBorderStyle(Border::BORDER_THIN)   // lebih tebal dari medium
-            ->getColor()->setRGB('000000');          // hitam
+            ->setBorderStyle(Border::BORDER_THICK)
+            ->getColor()->setRGB('FFFFFF');
 
+        $sheet->mergeCells("AI" . $r(1) . ":AI{$lastDataRow}");
 
-        $sheet->getStyle("A{$row18}:AC{$lastRow}")
-            ->getAlignment()
+        $sheet->getStyle("AI" . $r(1) . ":AI{$lastDataRow}")
+            ->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF00B050');
+
+        $sheet->getStyle("AI" . $r(1) . ":AI{$lastDataRow}")
+            ->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THICK)
+            ->getColor()->setRGB('FFFFFF');
+
+        $styleAll = $sheet->getStyle("A{$aksFirstDataRow}:AY{$lastDataRow}");
+
+        $styleAll->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THIN);
+
+        $styleAll->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER)
             ->setVertical(Alignment::VERTICAL_CENTER)
             ->setWrapText(true);
 
-        
-        // autosize kolom (boleh cukup sekali di luar loop, tapi aman juga di sini)
-        foreach (array_merge(range('A', 'Z'), ['AA', 'AB', 'AC']) as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(false);
-        }
+        $sheet->getDefaultRowDimension()->setRowHeight(22);
+        $sheet->getRowDimension($r(17))->setRowHeight(40);
+        $sheet->getRowDimension($optionRowStart)->setRowHeight(70);
+        $sheet->getRowDimension($optionRowEnd)->setRowHeight(60);
 
-        // row height hanya untuk baris header (per kartu)
-        $sheet->getRowDimension($row17)->setRowHeight(45);
-        $sheet->getRowDimension($row18)->setRowHeight(75);
-        $sheet->getRowDimension($row19)->setRowHeight(50);
-        $sheet->getRowDimension($row20)->setRowHeight(60);
-
-
-        return $lastRow;
+        return $lastDataRow;
     }
 }

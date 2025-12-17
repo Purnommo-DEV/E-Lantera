@@ -13,6 +13,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class RekapController extends Controller
 {
@@ -327,6 +328,23 @@ class RekapController extends Controller
         // =====================================================================
         // 1. HEADER UTAMA
         // =====================================================================
+        // LOGO
+        $logo = new Drawing();
+        $logo->setName('Logo');
+        $logo->setDescription('Logo Posyandu');
+        $logo->setPath(public_path('posyandu.png'));
+
+        $logo->setHeight(60);              // 🔥 JANGAN kegedean
+        $logo->setResizeProportional(true);
+
+        $logo->setCoordinates("N2");
+        $logo->setOffsetX(3);
+        $logo->setOffsetY(-2);             // 🔥 sejajar teks
+
+        $logo->setWorksheet($sheet);
+
+        // penting: kolom jangan lebar
+        $sheet->getColumnDimension('K')->setWidth(6);
 
         $sheet->setCellValue('A2', 'REKAPITULASI HASIL PEMERIKSAAN USIA DEWASA DAN USIA LANJUT (≥19 Tahun)');
         $sheet->mergeCells('A2:AJ2');
@@ -748,9 +766,15 @@ class RekapController extends Controller
         // ================== STYLING TABEL ==================
         $lastRow = $row - 1;
 
-        $sheet->getStyle("A{$row10}:AJ{$lastRow}")
-            ->getBorders()->getAllBorders()
+        $styleAll = $sheet->getStyle("A{$row10}:AJ{$lastRow}");
+
+        $styleAll->getBorders()->getAllBorders()
             ->setBorderStyle(Border::BORDER_THIN);
+
+        $styleAll->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER)
+            ->setWrapText(true);
 
         $sheet->getColumnDimension('A')->setWidth(18);
         foreach (range('B','Z') as $col) {

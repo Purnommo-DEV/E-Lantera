@@ -10,6 +10,7 @@ use App\Http\Controllers\WargaController;
 use App\Http\Controllers\PemeriksaanDewasaLansiaController;
 use App\Http\Controllers\PemeriksaanLansiaController;
 use App\Http\Controllers\RekapController;
+use App\Http\Controllers\RegisterDewasaLansiaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -112,5 +113,19 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{id}', [RoleController::class, 'update'])->name('update');
         Route::delete('/{id}', [RoleController::class, 'destroy'])->name('destroy');
     });
+
+    // ===========================================
+    // REGISTER DEWASA & LANSIA
+    // ===========================================
+    Route::prefix('register/dewasa-lansia')
+        ->name('register.dewasa-lansia.')
+        ->group(function () {
+
+            Route::get('/', [RegisterDewasaLansiaController::class, 'index'])
+                ->name('index');
+
+            Route::get('/export/excel', [RegisterDewasaLansiaController::class, 'exportExcel'])
+                ->name('export.excel');
+        });
 
 });

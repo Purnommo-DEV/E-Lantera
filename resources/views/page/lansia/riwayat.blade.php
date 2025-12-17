@@ -67,6 +67,14 @@
                         >
                             Edit
                         </button>
+                        {{-- HAPUS --}}
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-error btn-hapus-periksa"
+                            data-id="{{ $p->id }}"
+                            data-url="{{ route('lansia.destroy', $p->id) }}">
+                            Hapus
+                        </button>
                     </td>
                 </tr>
             @empty
