@@ -11,13 +11,13 @@ return new class extends Migration
         // 0. LEPAS STATUS GENERATED DAN ENUM YANG MENGGANGGU UPDATE
         Schema::table('pemeriksaan_dewasa_lansia', function (Blueprint $table) {
             // Kolom yang pernah generated → jadikan string biasa dulu
-            $table->string('td_kategori', 50)->storedAs(null)->virtualAs(null)->change();
-            $table->string('gd_kategori', 50)->storedAs(null)->virtualAs(null)->change();
-            $table->string('kategori_imt', 50)->storedAs(null)->virtualAs(null)->change();
+            $table->string('td_kategori', 50)->change();
+            $table->string('gd_kategori', 50)->change();
+            $table->string('kategori_imt', 50)->change();
 
             // Kalau skor_puma dulu pernah generated, ini akan "menjinakkan"-nya.
             // Kalau tidak, perintah ini tetap aman.
-            $table->integer('skor_puma')->storedAs(null)->virtualAs(null)->change();
+            $table->integer('skor_puma')->change();
 
             // PUMA: ubah dulu dari ENUM('Ya','Tidak') → VARCHAR(10) supaya bisa di-UPDATE ke 0/1
             $table->string('puma_napas_pendek', 10)->change();

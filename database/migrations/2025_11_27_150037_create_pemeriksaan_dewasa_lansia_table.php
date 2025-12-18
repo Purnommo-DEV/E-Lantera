@@ -17,20 +17,15 @@ return new class extends Migration
             $table->date('tanggal_periksa');
             $table->decimal('berat_badan', 5, 1);
             $table->decimal('tinggi_badan', 5, 1);
-            $table->decimal('imt', 5, 2)->storedAs('berat_badan / POW(tinggi_badan/100, 2)');
-            $table->string('kategori_imt', 20)->storedAs("CASE 
-                WHEN berat_badan / POW(tinggi_badan/100, 2) < 17 THEN 'Sangat Kurus'
-                WHEN berat_badan / POW(tinggi_badan/100, 2) < 18.5 THEN 'Kurus'
-                WHEN berat_badan / POW(tinggi_badan/100, 2) < 25 THEN 'Normal'
-                WHEN berat_badan / POW(tinggi_badan/100, 2) < 30 THEN 'Gemuk'
-                ELSE 'Obesitas' END");
+            $table->decimal('imt', 5, 2);
+            $table->string('kategori_imt', 20);
             $table->tinyInteger('lingkar_perut');
             $table->tinyInteger('lingkar_lengan_atas');
             $table->smallInteger('sistole');
             $table->smallInteger('diastole');
-            $table->string('td_kategori', 10)->storedAs("CASE WHEN sistole >= 140 OR diastole >= 90 THEN 'Tinggi' WHEN sistole < 90 OR diastole < 60 THEN 'Rendah' ELSE 'Normal' END");
+            $table->string('td_kategori', 10);
             $table->smallInteger('gula_darah');
-            $table->string('gd_kategori', 10)->storedAs("CASE WHEN gula_darah >= 200 THEN 'Tinggi' ELSE 'Normal' END");
+            $table->string('gd_kategori', 10);
             $table->string('mata_kanan', 15)->nullable();
             $table->string('mata_kiri', 15)->nullable();
             $table->string('telinga_kanan', 15)->nullable();
@@ -45,14 +40,14 @@ return new class extends Migration
             $table->enum('puma_flu', ['Ya','Tidak'])->default('Tidak');
             $table->enum('puma_spirometri', ['Ya','Tidak'])->default('Tidak');
             $table->enum('puma_alat', ['Ya','Tidak'])->default('Tidak');
-            $table->tinyInteger('skor_puma')->storedAs('(puma_napas_pendek="Ya")+(puma_dahak="Ya")+(puma_batuk="Ya")+(puma_mengi="Ya")+(puma_dokter="Ya")+(puma_flu="Ya")+(puma_spirometri="Ya")+(puma_alat="Ya")');
-            $table->boolean('puma_rujuk')->storedAs('skor_puma > 6');
+            $table->tinyInteger('skor_puma');
+            $table->boolean('puma_rujuk');
             // TBC
             $table->enum('tbc_batuk', ['Ya','Tidak'])->default('Tidak');
             $table->enum('tbc_demam', ['Ya','Tidak'])->default('Tidak');
             $table->enum('tbc_bb_turun', ['Ya','Tidak'])->default('Tidak');
             $table->enum('tbc_kontak', ['Ya','Tidak'])->default('Tidak');
-            $table->boolean('tbc_rujuk')->storedAs('(tbc_batuk="Ya")+(tbc_demam="Ya")+(tbc_bb_turun="Ya")+(tbc_kontak="Ya") >= 2');
+            $table->boolean('tbc_rujuk');
             $table->tinyInteger('usia');
             $table->enum('wawancara_kontrasepsi', ['Ya','Tidak']);
             $table->string('jenis_kontrasepsi', 50)->nullable();
