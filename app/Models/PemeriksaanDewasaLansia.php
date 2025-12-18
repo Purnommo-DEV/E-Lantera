@@ -9,17 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 class PemeriksaanDewasaLansia extends Model
 {
     protected $table = 'pemeriksaan_dewasa_lansia';
-
-    protected $fillable = [
-        'warga_id', 'tanggal_periksa', 'berat_badan', 'tinggi_badan', 'lingkar_perut',
-        'lingkar_lengan_atas', 'sistole', 'diastole', 'gula_darah', 'mata_kanan',
-        'mata_kiri', 'telinga_kanan', 'telinga_kiri', 'merokok',
-        'puma_napas_pendek', 'puma_dahak', 'puma_batuk', 'puma_spirometri',
-        'skor_puma', 'tbc_batuk', 'tbc_demam', 'tbc_bb_turun', 'tbc_kontak',
-        'wawancara_kontrasepsi', 'jenis_kontrasepsi', 'edukasi',
-        'rujuk_puskesmas', 'catatan', 'usia'
-    ];
-
+    protected $guarded = ['id'];
     protected $casts = [
         'tanggal_periksa' => 'date',
         'berat_badan'     => 'decimal:1',
