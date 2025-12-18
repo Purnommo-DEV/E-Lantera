@@ -25,14 +25,25 @@
         
         <!-- Logo + Judul -->
         <div class="text-center mb-8 fade-in">
-            <div class="bg-white/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto backdrop-blur-lg shadow-lg">
-                <i class="fas fa-heartbeat text-white text-4xl"></i>
+            <div
+                class="bg-white/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto backdrop-blur-lg shadow-lg">
+                <img
+                    src="{{ asset('elantera.png') }}"
+                    alt="E-Lantera"
+                    class="w-14 h-14 object-contain">
             </div>
+
             <h2 class="text-3xl font-bold text-white mt-4 drop-shadow">
                 Posyandu Taman Cipulir Estate
             </h2>
+
             <p class="text-white/80 mt-1 text-sm">
                 Akses dashboard pemeriksaan warga
+            </p>
+
+            {{-- Optional tagline --}}
+            <p class="text-white/70 mt-1 text-xs italic">
+                Lansia Sehat di Era Digital
             </p>
         </div>
 

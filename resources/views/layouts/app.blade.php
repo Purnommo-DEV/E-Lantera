@@ -8,7 +8,7 @@
     <title>@yield('title', 'E-Lantera') — Posyandu Taman Cipulir Estate</title>
 
     <!-- Favicon -->
-    <link rel="icon" href="{{ asset('img/favicon.png') }}" type="image/png">
+    <link rel="icon" href="{{ asset('elantera.png') }}" type="image/png">
 
     <!-- Font Poppins (sama persis seperti sebelumnya) -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -359,7 +359,7 @@
         <footer class="bg-white border-t border-gray-200 py-6 mt-auto">
             <div class="max-w-7xl mx-auto px-6 text-center text-sm text-gray-600">
                 © {{ date('Y') }} E-Lantera — Digitalisasi Posyandu Taman Cipulir Estate<br>
-                Dibuat dengan <span class="text-red-600">♥</span> oleh Kader Posyandu & Developer
+                Dibuat dengan <span class="text-red-600">♥</span> oleh Developer MRJ TCE
             </div>
         </footer>
     </div>
