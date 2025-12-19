@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — Posyandu TCE</title>
 
+    <link rel="icon" href="{{ asset('elantera.png') }}" type="image/png">
+    
     @vite('resources/css/app.css')
 
     <style>
