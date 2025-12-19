@@ -365,6 +365,39 @@
         });
     };
 
+    // SKILAS Auto Cek Rujuk
+    window.initSkilasResult = function () {
+        const statusText = document.getElementById('skilas-status-text');
+        const rujukWarning = document.getElementById('skilas-rujuk-warning');
+
+        if (!statusText || !rujukWarning) return;
+
+        function cekSkilas() {
+            // hitung hanya checkbox "YA" (merah)
+            const positif = document.querySelectorAll(
+                'input.checkbox-error:checked'
+            ).length > 0;
+
+            console.log({ positif });
+
+            if (positif) {
+                statusText.textContent = 'POSITIF';
+                rujukWarning.classList.remove('hidden');
+            } else {
+                statusText.textContent = 'NEGATIF';
+                rujukWarning.classList.add('hidden');
+            }
+        }
+
+        cekSkilas();
+
+        document.addEventListener('change', e => {
+            if (e.target.matches('input[type="checkbox"]')) {
+                cekSkilas();
+            }
+        });
+    };
+
     // ==================================================
     // SEMUA LOGIC UTAMA — JALAN SETELAH DOM READY
     // ==================================================
@@ -470,7 +503,8 @@
             .then(html => {
                 modalBody.innerHTML = html;
                 window.initAksCalculator?.();
-
+                window.initSkilasResult?.();
+                
                 // Ubah judul kalau edit
                 if (btn.hasClass('btn-edit-periksa')) {
                     document.querySelector('#lansiaModal h3').innerHTML = '<span class="text-orange-500 font-bold">Edit</span> Pemeriksaan Lansia';

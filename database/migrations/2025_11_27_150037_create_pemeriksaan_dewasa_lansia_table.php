@@ -47,7 +47,7 @@ return new class extends Migration
             $table->enum('tbc_demam', ['Ya','Tidak'])->default('Tidak');
             $table->enum('tbc_bb_turun', ['Ya','Tidak'])->default('Tidak');
             $table->enum('tbc_kontak', ['Ya','Tidak'])->default('Tidak');
-            $table->boolean('tbc_rujuk');
+            $table->boolean('tbc_rujuk')->default(false);
             $table->tinyInteger('usia');
             $table->enum('wawancara_kontrasepsi', ['Ya','Tidak']);
             $table->string('jenis_kontrasepsi', 50)->nullable();

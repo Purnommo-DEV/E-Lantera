@@ -145,14 +145,11 @@ class PemeriksaanLansiaController extends Controller
     private function simpanData(Request $request, PemeriksaanLansia $lansia = null)
     {
         // ==================== AMBIL DATA DASAR (WHITELIST) ====================
-        $data = $request->only([
-            'tanggal_periksa',
-            // field lain NON checkbox jika ada
-        ]);
+        $data = $request->all();
 
         // ==================== AKS ====================
         $aksFields = [
-            'bab_s0_tidak_terkendali', 'bab_s1_kadang_tak_terkendali',
+            'bab_s0_tidak_terkendali', 'bab_s1_kadang_tak_terkendali', 'bab_s2_terkendali',
             'bak_s0_tidak_terkendali_kateter', 'bak_s1_kadang_1x24jam', 'bak_s2_mandiri',
             'diri_s0_butuh_orang_lain', 'diri_s1_mandiri',
             'wc_s0_tergantung_lain', 'wc_s1_perlu_beberapa_bisa_sendiri', 'wc_s2_mandiri',
@@ -170,6 +167,37 @@ class PemeriksaanLansiaController extends Controller
             $data["aks_{$field}"] = $request->has("aks_{$field}") ? 1 : 0;
         }
 
+        $aksTotal = 0;
+
+        $aksScoreMap = [
+            's0' => 0,
+            's1' => 1,
+            's2' => 2,
+            's3' => 3,
+        ];
+
+        foreach ($aksFields as $field) {
+            if ($request->has("aks_{$field}")) {
+                // ambil suffix s0/s1/s2/s3 dari nama field
+                if (preg_match('/_s([0-3])_/', $field, $m)) {
+                    $aksTotal += $aksScoreMap['s' . $m[1]];
+                }
+            }
+        }
+        
+        $data['aks_total_skor'] = $aksTotal;
+
+        $aks = $data['aks_total_skor'];
+        $data['aks_kategori'] = match (true) {
+            $aks === 20              => 'M', // Mandiri
+            $aks >= 12 && $aks <= 19 => 'R', // Risiko Ringan
+            $aks >= 9  && $aks <= 11 => 'S', // Sedang
+            $aks >= 5  && $aks <= 8  => 'B', // Berat
+            default                  => 'T', // 0–4 Total
+        };
+        
+        $data['aks_rujuk_otomatis'] = $aks < 20;
+        
         // ==================== SKIL ====================
         $skilFields = [
             'orientasi_waktu_tempat', 'mengulang_ketiga_kata', 'tes_berdiri_dari_kursi',
@@ -185,6 +213,27 @@ class PemeriksaanLansiaController extends Controller
         // ==================== KHUSUS ====================
         $data['skil_tes_bisik'] = $request->has('skil_tes_bisik') ? 1 : 0;
         $data['skil_tidak_dapat_dilakukan'] = $request->has('skil_tidak_dapat_dilakukan') ? 1 : 0;
+
+        // ==================== HITUNG RUJUK OTOMATIS ====================
+        $skilRujuk = false;
+
+        // cek semua skil utama
+        foreach ($skilFields as $f) {
+            if ($data["skil_{$f}"] === 1) {
+                $skilRujuk = true;
+                break;
+            }
+        }
+
+        // opsional: ikutkan field khusus
+        if (
+            $data['skil_tes_bisik'] === 1 ||
+            $data['skil_tidak_dapat_dilakukan'] === 1
+        ) {
+            $skilRujuk = true;
+        }
+
+        $data['skil_rujuk_otomatis'] = $skilRujuk;
 
         // ==================== CREATE vs UPDATE ====================
         if ($lansia && $lansia->exists) {

@@ -26,11 +26,11 @@
         <!-- Logo + Judul -->
         <div class="text-center mb-8 fade-in">
             <div
-                class="bg-white/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto backdrop-blur-lg shadow-lg">
+                class="bg-white/90 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto backdrop-blur-lg shadow-lg">
                 <img
                     src="{{ asset('elantera.png') }}"
                     alt="E-Lantera"
-                    class="w-14 h-14 object-contain">
+                    class="w-24 h-24 object-contain">
             </div>
 
             <h2 class="text-3xl font-bold text-white mt-4 drop-shadow">

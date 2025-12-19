@@ -8,7 +8,7 @@
 
     {{-- ================= HEADER ================= --}}
     <div class="bg-gradient-to-r from-purple-100 to-pink-100 p-8 rounded-2xl border-4 border-purple-300">
-        <h3 class="text-3xl font-bold text-purple-800">{{ $warga->nama_lengkap }}</h3>
+        <h3 class="text-3xl font-bold text-purple-800">{{ $warga->nama }}</h3>
         <p class="text-xl">
             NIK: {{ $warga->nik }}
             |
@@ -28,8 +28,8 @@
     </div>
 
     {{-- ================= AKS - CHECKBOX + AUTO HITUNG ================= --}}
-    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-10 rounded-3xl border-4 border-indigo-300">
-        <h2 class="text-4xl font-bold text-center text-indigo-800 mb-6">
+    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-5 md:p-10 rounded-2xl md:rounded-3xl border-2 md:border-4 border-indigo-300">
+        <h2 class="text-2xl md:text-4xl font-bold text-center text-indigo-800 mb-4 md:mb-6">
             AKS - Aktivitas Kehidupan Sehari-hari (Barthel Index)
         </h2>
 
@@ -124,7 +124,7 @@
             @endphp
 
             @foreach($aks as $kategori => $item)
-                <div class="bg-white p-8 rounded-2xl shadow-xl border-2 border-indigo-200">
+                <div class="bg-white p-5 md:p-8 rounded-xl md:rounded-2xl shadow-lg border-2 border-indigo-200">
                     <h4 class="text-2xl font-bold text-indigo-800 mb-4">{{ $kategori }}</h4>
                     <p class="text-gray-700 mb-6 leading-relaxed">{{ $item['keterangan'] }}</p>
                     <div class="space-y-5">
@@ -140,11 +140,11 @@
                                     name="{{ $fieldName }}"
                                     value="1"
                                     data-skor="{{ $skor }}"
-                                    class="checkbox checkbox-lg checkbox-primary aks-checkbox"
+                                    class="checkbox checkbox-sm md:checkbox-lg checkbox-primary aks-checkbox"
                                     {{ isset($lansia) && $lansia->{$fieldName} ? 'checked' : '' }}
                                 >
                                 <div>
-                                    <span class="text-lg font-medium">{{ $label }}</span>
+                                    <span class="text-sm md:text-lg font-medium leading-snug">
                                     <span class="badge badge-primary ml-3">Skor {{ $skor }}</span>
                                 </div>
                             </label>
@@ -157,10 +157,10 @@
         {{-- HASIL AKS --}}
         <div class="mt-12 p-8 bg-gradient-to-r from-indigo-900 to-purple-900 rounded-3xl text-white text-center" id="aks-result-box">
             <h3 class="text-4xl font-bold mb-6">HASIL AKS (Barthel Index)</h3>
-            <div class="text-6xl font-black" id="total-skor">0</div>
-            <div class="text-3xl mt-4 font-bold" id="kategori-aks">Total Ketergantungan (T)</div>
+            <div class="text-4xl md:text-6xl font-black" id="total-skor">0</div>
+            <div class="text-xl md:text-3xl mt-3 md:mt-4 font-bold" id="kategori-aks">Total Ketergantungan (T)</div>
 
-            <div class="mt-6 grid grid-cols-5 gap-4 text-sm">
+            <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-xs md:text-sm">
                 <div class="bg-green-600 p-4 rounded-xl">M = 20<br><small>Mandiri</small></div>
                 <div class="bg-lime-600 p-4 rounded-xl">R = 12–19<br><small>Risiko Ringan</small></div>
                 <div class="bg-yellow-600 p-4 rounded-xl">S = 9–11<br><small>Sedang</small></div>
@@ -194,7 +194,7 @@
     </div>
 
     {{-- ================= SKILAS ================= --}}
-    <div class="bg-gradient-to-r from-red-50 to-pink-50 p-10 rounded-3xl border-4 border-red-300 mt-12">
+    <div class="bg-gradient-to-r from-red-50 to-pink-50 p-5 md:p-10 rounded-2xl md:rounded-3xl border-2 md:border-4 border-red-300 mt-12">
         <h2 class="text-4xl font-bold text-center text-red-800 mb-6">
             SKILAS - Skrining Risiko Lansia
         </h2>
@@ -233,7 +233,7 @@
             ];
         @endphp
 
-        <div class="grid md:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-8">
             @foreach($skilasGroups as $group)
                 <div class="bg-white p-7 rounded-2xl shadow-2xl border-2 border-gray-300">
                     <h3 class="text-2xl font-bold text-red-800 mb-6">{{ $group['title'] }}</h3>
@@ -305,24 +305,52 @@
         
     </div>
 
-    {{-- ================= SKILAS - EDUKASI & CATATAN ================= --}}
-    <div class="mt-12 p-6 bg-gradient-to-r from-red-100 to-pink-100 rounded-2xl border-2 border-red-300">
-        <h3 class="text-2xl font-bold text-red-900 mb-4">Edukasi & Catatan SKILAS</h3>
-        <div class="grid md:grid-cols-2 gap-6">
-            <div>
-                <label class="label">
-                    <span class="label-text font-semibold">Edukasi yang diberikan (SKILAS)</span>
-                </label>
-                <textarea name="skil_edukasi" class="textarea textarea-bordered w-full h-32" placeholder="Contoh: Imunisasi, gizi, dll">{{ old('skil_edukasi', $lansia->skil_edukasi ?? '') }}</textarea>
-            </div>
-            <div>
-                <label class="label">
-                    <span class="label-text font-semibold">Catatan tambahan SKILAS</span>
-                </label>
-                <textarea name="skil_catatan" class="textarea textarea-bordered w-full h-32" placeholder="Catatan lain...">{{ old('skil_catatan', $lansia->skil_catatan ?? '') }}</textarea>
+    {{-- ================= HASIL SKILAS ================= --}}
+    <div class="mt-12 p-8 bg-gradient-to-r from-red-900 to-pink-900 rounded-3xl text-white text-center"
+         id="skilas-result-box">
+         
+        <h3 class="text-2xl md:text-4xl font-bold mb-4 md:mb-6">HASIL SKILAS</h3>
+
+        {{-- STATUS --}}
+        <div class="text-4xl md:text-6xl font-black" id="skilas-status-text">
+            NEGATIF
+        </div>
+
+        {{-- RUJUK WARNING --}}
+        <div id="skilas-rujuk-warning" class="mt-6 text-xl md:text-3xl font-bold hidden">
+            <span class="text-yellow-300">
+                ⚠️ WAJIB RUJUK KE PUSKESMAS / RS!
+            </span>
+        </div>
+
+        <div class="mt-6 text-lg opacity-90">
+            Jika terdapat <b>minimal 1 jawaban “Ya”</b> pada SKILAS,
+            maka lansia <b>direkomendasikan untuk rujukan</b>.
+        </div>
+
+        {{-- ================= SKILAS - EDUKASI & CATATAN ================= --}}
+        <div class="mt-8 p-6 bg-gradient-to-r from-red-100 to-pink-100 rounded-2xl border-2 border-red-300 text-gray-900">
+            <h3 class="text-2xl font-bold text-red-900 mb-4">
+                Edukasi & Catatan SKILAS
+            </h3>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="label">
+                        <span class="label-text font-semibold">Edukasi yang diberikan (SKILAS)</span>
+                    </label>
+                    <textarea name="skil_edukasi" class="textarea textarea-bordered w-full h-32" placeholder="Contoh: Imunisasi, gizi, dll">{{ old('skil_edukasi', $lansia->skil_edukasi ?? '') }}</textarea>
+                </div>
+                <div>
+                    <label class="label">
+                        <span class="label-text font-semibold">Catatan tambahan SKILAS</span>
+                    </label>
+                    <textarea name="skil_catatan" class="textarea textarea-bordered w-full h-32" placeholder="Catatan lain...">{{ old('skil_catatan', $lansia->skil_catatan ?? '') }}</textarea>
+                </div>
             </div>
         </div>
     </div>
+
 </div>
 
 
@@ -331,7 +359,7 @@
         <button type="button" onclick="tutupModal()" class="btn btn-lg btn-ghost">
             Batal
         </button>
-        <button type="submit" class="btn btn-lg btn-primary text-xl px-16">
+        <button class="btn btn-primary btn-md md:btn-lg text-base md:text-xl px-8 md:px-16">
             SIMPAN PEMERIKSAAN
         </button>
     </div>

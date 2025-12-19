@@ -183,7 +183,7 @@ class PemeriksaanDewasaLansiaController extends Controller
         $input['td_kategori'] = (str_contains($input['td_kategori'] ?? '', 'T')) ? 'T' : 'N';
 
         // === 4. GULA DARAH KATEGORI: "Tinggi (T)" → "T", selain itu → "N" ===
-        $input['gula_kategori'] = (str_contains($input['gula_kategori'] ?? '', 'T')) ? 'T' : 'N';
+        $input['gd_kategori'] = (str_contains($input['gd_kategori'] ?? '', 'T')) ? 'T' : 'N';
 
         // === 5. MATA & TELINGA: "Normal" → "N", "Gangguan" → "G" ===
         $mataTelinga = ['mata_kanan', 'mata_kiri', 'telinga_kanan', 'telinga_kiri'];
@@ -199,8 +199,20 @@ class PemeriksaanDewasaLansiaController extends Controller
         // === 7. TBC: pastikan Ya/Tidak ===
         $tbcFields = ['tbc_batuk', 'tbc_demam', 'tbc_bb_turun', 'tbc_kontak'];
         foreach ($tbcFields as $field) {
-            $input[$field] = in_array($input[$field] ?? '', ['Ya', 'Tidak']) ? $input[$field] : 'Tidak';
+            $input[$field] = in_array($input[$field] ?? '', ['Ya', 'Tidak'])
+                ? $input[$field]
+                : 'Tidak';
         }
+
+        // === 7b. HITUNG TBC RUJUK (>= 2 gejala) ===
+        $tbcCount = 0;
+        foreach ($tbcFields as $field) {
+            if ($input[$field] === 'Ya') {
+                $tbcCount++;
+            }
+        }
+
+        $input['tbc_rujuk'] = $tbcCount >= 2;
 
         // === 8. RUJUK PUSKESMAS ===
         $input['rujuk_puskesmas'] = $request->has('rujuk_puskesmas');
@@ -268,10 +280,30 @@ class PemeriksaanDewasaLansiaController extends Controller
             $input['kategori_imt'] = $map[$input['kategori_imt']] ?? 'N';
         }
 
-        // === TD & GULA ===
-        $input['td_kategori']   = str_contains($input['td_kategori'] ?? '', 'T') ? 'T' : 'N';
-        $input['gula_kategori'] = str_contains($input['gula_kategori'] ?? '', 'T') ? 'T' : 'N';
+        // === 3. TD KATEGORI: "Tinggi (T)" → "T", selain itu → "N" ===
+        $input['td_kategori'] = (str_contains($input['td_kategori'] ?? '', 'T')) ? 'T' : 'N';
 
+        $input['gd_kategori'] = str_contains($input['gd_kategori'] ?? '', 'T') ? 'T' : 'N';
+
+        // === TD & GULA ===
+        // === 7. TBC: pastikan Ya/Tidak ===
+        $tbcFields = ['tbc_batuk', 'tbc_demam', 'tbc_bb_turun', 'tbc_kontak'];
+        foreach ($tbcFields as $field) {
+            $input[$field] = in_array($input[$field] ?? '', ['Ya', 'Tidak'])
+                ? $input[$field]
+                : 'Tidak';
+        }
+
+        // === 7b. HITUNG TBC RUJUK (>= 2 gejala) ===
+        $tbcCount = 0;
+        foreach ($tbcFields as $field) {
+            if ($input[$field] === 'Ya') {
+                $tbcCount++;
+            }
+        }
+
+        $input['tbc_rujuk'] = $tbcCount >= 2;
+    
         // === MATA & TELINGA ===
         foreach (['mata_kanan','mata_kiri','telinga_kanan','telinga_kiri'] as $f) {
             if (isset($input[$f])) {

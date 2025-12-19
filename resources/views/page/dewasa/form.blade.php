@@ -131,7 +131,7 @@
                 <input type="text" id="gula_hasil"
                        class="input input-bordered w-full bg-pink-100 font-bold text-lg md:text-xl text-center"
                        readonly value="Normal (N)">
-                <input type="hidden" name="gula_kategori" id="gula_kategori">
+                <input type="hidden" name="gd_kategori" id="gula_kategori">
             </div>
         </div>
     </div>
