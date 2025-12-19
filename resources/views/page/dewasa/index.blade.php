@@ -199,6 +199,136 @@
         #dewasaTable tbody td { padding: 5px 6px !important; }
         #dewasaTable .btn { font-size: 0.68rem !important; padding: 4px 8px !important; }
     }
+
+    /* ===========================
+       MOBILE FORM POLISH (<=768px)
+       =========================== */
+    @media (max-width: 768px) {
+
+        /* Header form */
+        .modal-box h2 {
+            font-size: 1.25rem !important; /* text-xl */
+            line-height: 1.4;
+        }
+
+        /* Section title */
+        .modal-box h3 {
+            font-size: 1.05rem !important; /* ~text-base */
+            margin-bottom: 0.75rem !important;
+        }
+
+        /* Reduce paddings */
+        .modal-box .p-6 { padding: 1rem !important; }
+        .modal-box .p-8 { padding: 1.25rem !important; }
+
+        /* Reduce margins */
+        .modal-box .mb-8 { margin-bottom: 1.25rem !important; }
+        .modal-box .mt-8 { margin-top: 1.25rem !important; }
+        .modal-box .mt-10 { margin-top: 1.5rem !important; }
+
+        /* Inputs & selects */
+        .modal-box input,
+        .modal-box select,
+        .modal-box textarea {
+            font-size: 0.875rem !important; /* text-sm */
+        }
+
+        /* Result boxes (IMT, TD, Gula, PUMA, TBC) */
+        #imt_display,
+        #kategori_imt_display,
+        #td_hasil,
+        #gula_hasil {
+            font-size: 1rem !important;
+        }
+
+        /* Big result numbers */
+        #usia_display,
+        #skor_usia_display,
+        #total_puma,
+        #hasil_puma,
+        #hasil_tbc {
+            font-size: 1.25rem !important;
+        }
+
+        /* Checkbox & radio */
+        .checkbox-md,
+        .checkbox-lg,
+        .radio-md {
+            transform: scale(0.9);
+        }
+
+        /* AKS / SKILAS cards */
+        .rounded-3xl {
+            border-radius: 1rem !important;
+        }
+
+        /* Buttons */
+        .modal-action .btn {
+            font-size: 0.875rem !important;
+            padding: 0.5rem 1rem !important;
+        }
+
+        /* Submit button text */
+        #btnSubmit {
+            font-size: 1rem !important;
+            padding: 0.75rem 1.5rem !important;
+        }
+
+        /* Reduce grid force */
+        .grid.md\\:grid-cols-3,
+        .grid.lg\\:grid-cols-4 {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    
+    /* ===========================
+       GLOBAL FORM ROUNDED STYLE
+       =========================== */
+
+    /* Input, Select, Textarea */
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    input[type="time"],
+    input[type="search"],
+    input[type="tel"],
+    select,
+    textarea {
+        border-radius: 0.75rem !important; /* rounded-xl */
+    }
+
+    /* Focus state tetap halus */
+    input:focus,
+    select:focus,
+    textarea:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); /* soft blue ring */
+    }
+
+    /* DaisyUI input override */
+    .input,
+    .select,
+    .textarea {
+        border-radius: 0.75rem !important;
+    }
+
+    /* Checkbox & radio tetap proporsional */
+    .checkbox,
+    .radio {
+        border-radius: 0.5rem;
+    }
+
+    /* Tombol juga biar konsisten */
+    .btn {
+        border-radius: 0.75rem;
+    }
+
+    /* Badge biar ikut lembut */
+    .badge {
+        border-radius: 9999px;
+    }
 </style>
 @endpush
 

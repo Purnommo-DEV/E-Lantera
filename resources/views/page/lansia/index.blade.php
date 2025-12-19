@@ -274,6 +274,56 @@
         #lansiaTable tbody td { padding: 4px 6px !important; }
         #lansiaTable .btn { font-size: 0.68rem !important; padding: 3px 6px !important; }
     }
+
+    /* ===========================
+       GLOBAL FORM ROUNDED STYLE
+       =========================== */
+
+    /* Input, Select, Textarea */
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    input[type="time"],
+    input[type="search"],
+    input[type="tel"],
+    select,
+    textarea {
+        border-radius: 0.75rem !important; /* rounded-xl */
+    }
+
+    /* Focus state tetap halus */
+    input:focus,
+    select:focus,
+    textarea:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); /* soft blue ring */
+    }
+
+    /* DaisyUI input override */
+    .input,
+    .select,
+    .textarea {
+        border-radius: 0.75rem !important;
+    }
+
+    /* Checkbox & radio tetap proporsional */
+    .checkbox,
+    .radio {
+        border-radius: 0.5rem;
+    }
+
+    /* Tombol juga biar konsisten */
+    .btn {
+        border-radius: 0.75rem;
+    }
+
+    /* Badge biar ikut lembut */
+    .badge {
+        border-radius: 9999px;
+    }
+    
 </style>
 @endpush
 

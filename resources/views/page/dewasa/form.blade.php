@@ -6,28 +6,66 @@
     @if(isset($periksa)) @method('PUT') @endif
 
     <!-- HEADER + USIA & JK OTOMATIS -->
-    <div class="bg-gradient-to-r from-teal-700 to-teal-900 text-white p-6 md:p-8 rounded-2xl md:-mx-4 md:-mt-4 mb-8 shadow-2xl">
-        <h2 class="text-2xl md:text-4xl font-bold break-words">{{ $warga->nama }}</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-4 md:mt-6 text-sm md:text-lg">
-            <div class="truncate">
-                NIK: <span class="font-bold break-all">{{ $warga->nik }}</span>
-            </div>
-            <div class="truncate">
-                JK:
-                <span class="font-bold">
-                    {{ $warga->jenis_kelamin }}
-                    (<span id="jk_skor">{{ $warga->jenis_kelamin == 'Laki-laki' ? '1' : '0' }}</span>)
+    <div class="bg-gradient-to-r from-teal-700 to-teal-900 text-white
+                p-5 md:p-8 rounded-2xl md:-mx-4 md:-mt-4 mb-8 shadow-2xl">
+
+        <!-- NAMA -->
+        <h2 class="text-xl md:text-3xl font-bold break-words leading-snug">
+            {{ $warga->nama }}
+        </h2>
+
+        <!-- INFO GRID -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4
+                    gap-3 md:gap-6 mt-4 md:mt-6 text-sm md:text-base">
+
+            <!-- NIK -->
+            <div class="flex flex-col bg-white/10 rounded-xl p-3">
+                <span class="text-xs uppercase tracking-wide text-white/70">
+                    NIK
+                </span>
+                <span class="font-semibold break-all">
+                    {{ $warga->nik }}
                 </span>
             </div>
-            <div>
-                Usia:
-                <span class="font-bold text-yellow-300 text-2xl md:text-3xl" id="usia_display">-</span>
+
+            <!-- JENIS KELAMIN -->
+            <div class="flex flex-col bg-white/10 rounded-xl p-3">
+                <span class="text-xs uppercase tracking-wide text-white/70">
+                    Jenis Kelamin
+                </span>
+                <span class="font-semibold">
+                    {{ $warga->jenis_kelamin }}
+                    (<span id="jk_skor">
+                        {{ $warga->jenis_kelamin == 'Laki-laki' ? '1' : '0' }}
+                    </span>)
+                </span>
             </div>
-            <div>
-                Skor Usia PUMA:
-                <span class="font-bold text-orange-300 text-xl md:text-2xl" id="skor_usia_display">-</span>
+
+            <!-- USIA -->
+            <div class="flex flex-col bg-white/10 rounded-xl p-3">
+                <span class="text-xs uppercase tracking-wide text-white/70">
+                    Usia
+                </span>
+                <span class="font-bold text-yellow-300 text-xl md:text-2xl"
+                      id="usia_display">
+                    -
+                </span>
             </div>
+
+            <!-- SKOR USIA PUMA -->
+            <div class="flex flex-col bg-white/10 rounded-xl p-3">
+                <span class="text-xs uppercase tracking-wide text-white/70">
+                    Skor Usia PUMA
+                </span>
+                <span class="font-bold text-orange-300 text-lg md:text-xl"
+                      id="skor_usia_display">
+                    -
+                </span>
+            </div>
+
         </div>
+
+        <!-- Hidden Fields -->
         <input type="hidden" name="jk_puma" id="jk_puma">
         <input type="hidden" name="usia_puma" id="usia_puma">
     </div>
@@ -78,6 +116,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-6 md:mt-8">
             <div>
+                <label class="label font-semibold text-sm md:text-base">Lingkar Perut</label>
                 <input type="number" name="lingkar_perut"
                        value="{{ $periksa->lingkar_perut ?? '' }}"
                        placeholder="Lingkar Perut (Cm)"
@@ -85,6 +124,7 @@
                        required>
             </div>
             <div>
+                <label class="label font-semibold text-sm md:text-base">Lingkar Lengan Atas</label>
                 <input type="number" name="lingkar_lengan_atas"
                        value="{{ $periksa->lingkar_lengan_atas ?? '' }}"
                        placeholder="LLA (Cm)"
@@ -154,7 +194,7 @@
 
     <!-- SKRINING PUMA -->
     <div class="bg-orange-50 border-4 border-orange-500 p-6 md:p-8 rounded-2xl mb-8">
-        <h3 class="text-2xl md:text-3xl font-bold text-orange-900 mb-6 md:mb-8 text-center">
+        <h3 class="text-lg md:text-3xl font-bold text-orange-900 mb-6 md:mb-8 text-center">
             SKRINING RISIKO PPOK — PUMA
         </h3>
 

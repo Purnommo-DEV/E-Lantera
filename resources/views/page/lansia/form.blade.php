@@ -6,25 +6,62 @@
     @if(isset($lansia)) @method('PUT') @endif
     <input type="hidden" name="warga_id" value="{{ $warga->id }}">
 
-    {{-- ================= HEADER ================= --}}
-    <div class="bg-gradient-to-r from-purple-100 to-pink-100 p-8 rounded-2xl border-4 border-purple-300">
-        <h3 class="text-3xl font-bold text-purple-800">{{ $warga->nama }}</h3>
-        <p class="text-xl">
-            NIK: {{ $warga->nik }}
-            |
-            Usia:
-            {{ $warga->tanggal_lahir ? \Carbon\Carbon::parse($warga->tanggal_lahir)->age : '-' }} tahun
-        </p>
+    {{-- ================= HEADER PEMERIKSAAN ================= --}}
+    <div class="bg-gradient-to-r from-indigo-600 to-blue-700 text-white
+                p-5 md:p-8 rounded-2xl md:-mx-4 md:-mt-4 mb-8 shadow-2xl">
 
-        <input
-            type="date"
-            name="tanggal_periksa"
-            required
-            class="input input-bordered input-lg mt-6 w-full max-w-xs"
-            value="{{ isset($lansia) && $lansia->tanggal_periksa
-                ? \Carbon\Carbon::parse($lansia->tanggal_periksa)->format('Y-m-d')
-                : now()->format('Y-m-d') }}"
-        >
+        <!-- NAMA -->
+        <h2 class="text-xl md:text-3xl font-bold break-words leading-snug">
+            {{ $warga->nama }}
+        </h2>
+
+        <!-- INFO GRID -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4
+                    gap-3 md:gap-6 mt-4 md:mt-6 text-sm md:text-base">
+
+            <!-- NIK -->
+            <div class="flex flex-col bg-white/10 rounded-xl p-3">
+                <span class="text-xs uppercase tracking-wide text-white/70">
+                    NIK
+                </span>
+                <span class="font-semibold break-all">
+                    {{ $warga->nik }}
+                </span>
+            </div>
+
+            <!-- JENIS KELAMIN -->
+            <div class="flex flex-col bg-white/10 rounded-xl p-3">
+                <span class="text-xs uppercase tracking-wide text-white/70">
+                    Jenis Kelamin
+                </span>
+                <span class="font-semibold">
+                    {{ $warga->jenis_kelamin }}
+                </span>
+            </div>
+
+            <!-- USIA -->
+            <div class="flex flex-col bg-white/10 rounded-xl p-3">
+                <span class="text-xs uppercase tracking-wide text-white/70">
+                    Usia
+                </span>
+                <span class="font-bold text-yellow-300 text-xl md:text-2xl">
+                    {{ $warga->tanggal_lahir
+                        ? \Carbon\Carbon::parse($warga->tanggal_lahir)->age
+                        : '-' }}
+                    th
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div>
+            <label class="label text-red-600 font-bold text-sm md:text-lg">* Tanggal Periksa</label>
+            <input type="date" name="tanggal_periksa" id="tanggal_periksa"
+                   value="{{ isset($periksa) ? $periksa->tanggal_periksa->format('Y-m-d') : now()->format('Y-m-d') }}"
+                   class="input input-bordered text-base md:text-lg w-full"
+                   required>
+        </div>
     </div>
 
     {{-- ================= AKS - CHECKBOX + AUTO HITUNG ================= --}}
@@ -133,19 +170,28 @@
                                 [$field, $skor] = explode('|', $data);
                                 $fieldName = 'aks_'.$field;
                             @endphp
-
-                            <label class="flex items-center gap-4 cursor-pointer hover:bg-indigo-50 p-4 rounded-xl transition">
+                            <label class="flex items-center gap-4 cursor-pointer hover:bg-indigo-50 rounded-xl transition">
                                 <input
                                     type="checkbox"
                                     name="{{ $fieldName }}"
                                     value="1"
                                     data-skor="{{ $skor }}"
                                     class="checkbox checkbox-sm md:checkbox-lg checkbox-primary aks-checkbox"
-                                    {{ isset($lansia) && $lansia->{$fieldName} ? 'checked' : '' }}
-                                >
-                                <div>
-                                    <span class="text-sm md:text-lg font-medium leading-snug">
-                                    <span class="badge badge-primary ml-3">Skor {{ $skor }}</span>
+                                    {{ isset($lansia) && $lansia->{$fieldName} ? 'checked' : '' }}>
+
+                                <div class="flex-1">
+                                    <!-- TEKS OPSI (INI YANG HILANG) -->
+                                    <span class="block text-xs sm:text-sm md:text-base font-medium leading-snug">
+                                        {{ $label }}
+                                    </span>
+
+                                    <!-- BADGE SKOR -->
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="inline-flex items-center badge badge-primary font-bold">
+                                            Skor {{ $skor }}
+                                        </span>
+                                    </div>
+
                                 </div>
                             </label>
                         @endforeach
