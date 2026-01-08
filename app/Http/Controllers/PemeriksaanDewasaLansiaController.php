@@ -950,11 +950,12 @@ class PemeriksaanDewasaLansiaController extends Controller
                 ? round($periksa->berat_badan / (($periksa->tinggi_badan / 100) ** 2), 2)
                 : 0;
 
-            $kategori = $imt < 17   ? 'SK'
-                      : ($imt < 18.5 ? 'K'
-                      : ($imt < 25   ? 'N'
-                      : ($imt < 30   ? 'G' : 'O')));
-
+            $kategori =
+                $imt < 17     ? 'SK' :   // Sangat Kurus
+                ($imt < 18.5  ? 'K'  :   // Kurus
+                ($imt <= 25   ? 'N'  :   // Normal
+                ($imt <= 27   ? 'G'  :   // Gemuk
+                               'O'  )));// Obesitas
 
             $sheet->setCellValue("B{$row22}", $periksa->berat_badan ?? '');
             $sheet->setCellValue("C{$row22}", $periksa->tinggi_badan ?? '');
@@ -1759,11 +1760,13 @@ class PemeriksaanDewasaLansiaController extends Controller
                 ? round($periksa->berat_badan / (($periksa->tinggi_badan / 100) ** 2), 2)
                 : 0;
 
-            $kategori = $imt < 17   ? 'SK'
-                      : ($imt < 18.5 ? 'K'
-                      : ($imt < 25   ? 'N'
-                      : ($imt < 30   ? 'G' : 'O')));
-
+            $kategori =
+                $imt < 17     ? 'SK' :   // Sangat Kurus
+                ($imt < 18.5  ? 'K'  :   // Kurus
+                ($imt <= 25   ? 'N'  :   // Normal
+                ($imt <= 27   ? 'G'  :   // Gemuk
+                               'O'  )));// Obesitas
+                
             $sheet->setCellValue("B{$row23}", $periksa->berat_badan ?? '');
             $sheet->setCellValue("C{$row23}", $periksa->tinggi_badan ?? '');
             $sheet->setCellValue("D{$row23}", $kategori);

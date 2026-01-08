@@ -399,12 +399,21 @@
                 const fix = imt.toFixed(2);
                 document.getElementById('imt_value').value = fix;
                 document.getElementById('imt_display').value = fix;
-                const kat = imt < 17 ? 'Sangat Kurus (SK)' :
-                           imt < 18.5 ? 'Kurus (K)' :
-                           imt < 25 ? 'Normal (N)' :
-                           imt < 30 ? 'Gemuk (G)' : 'Obesitas (O)';
-                document.getElementById('kategori_imt').value = kat;
-                document.getElementById('kategori_imt_display').value = kat;
+                let kategori = '';
+                if (imt < 17) {
+                    kategori = 'Sangat Kurus';
+                } else if (imt < 18.5) {
+                    kategori = 'Kurus';
+                } else if (imt <= 25) {
+                    kategori = 'Normal';
+                } else if (imt <= 27) {
+                    kategori = 'Gemuk';
+                } else {
+                    kategori = 'Obesitas';
+                }
+
+                document.getElementById('kategori_imt').value = kategori;
+                document.getElementById('kategori_imt_display').value = kategori;
             } else {
                 document.getElementById('imt_display').value = '-';
                 document.getElementById('kategori_imt_display').value = 'Isi BB & TB';
