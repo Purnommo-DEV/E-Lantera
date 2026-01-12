@@ -1,9 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Pemeriksaan Dewasa & Lansia')
-
 @section('content')
 <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
     <div class="bg-gradient-to-r from-teal-700 to-teal-900 text-white p-6 md:p-8">
+        <!-- header tetap sama -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 md:gap-6">
             <div>
                 <h3 class="text-2xl md:text-3xl font-bold">Pemeriksaan Dewasa & Lansia</h3>
@@ -17,16 +17,36 @@
     </div>
 
     <div class="p-4 md:p-8">
-        <div class="flex justify-end mb-4">
-            <a href="{{ route('dewasa.exportSemua') }}"
-               class="px-3 py-2 md:px-4 md:py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 text-sm md:text-base">
-                Export Excel Semua
-            </a>
+        <!-- Tombol Export Selected + Semua -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+            <div class="flex flex-wrap gap-3">
+                <button id="exportSelected" 
+                        class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition" 
+                        disabled>
+                    Export Selected ke Excel
+                </button>
+                <a href="{{ route('dewasa.exportSemua') }}" 
+                   class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg">
+                    Export Semua
+                </a>
+                <button id="filterHariIni" 
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition">
+                    Sudah Periksa Hari Ini
+                </button>
+                <button id="filterSemua" 
+                        class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition">
+                    Tampilkan Semua
+                </button>
+            </div>
         </div>
+
         <div class="overflow-x-auto">
             <table id="dewasaTable" class="table table-zebra w-full">
                 <thead class="bg-teal-100 text-teal-900">
                     <tr>
+                        <th class="w-10 text-center">
+                            <input type="checkbox" id="selectAll" class="checkbox checkbox-success" />
+                        </th>
                         <th>NIK</th>
                         <th>Nama Lengkap</th>
                         <th>Umur</th>
@@ -45,12 +65,10 @@
     </div>
 </div>
 
-<!-- MODAL DAISYUI -->
+<!-- Modal tetap sama -->
 <div id="dewasaModal" class="modal">
     <div class="modal-box w-11/12 max-w-5xl bg-white">
-        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick="tutupModal()">
-            X
-        </button>
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick="tutupModal()">X</button>
         <h3 class="text-2xl md:text-3xl font-bold mb-4 md:mb-8 text-teal-700" id="modalTitle">
             Pemeriksaan Dewasa & Lansia
         </h3>
@@ -339,6 +357,7 @@
 
 <script>
     let table;
+    let selectedIds = new Set();
 
     // FUNGSI MODAL DAISYUI
     function bukaModal() {
@@ -354,6 +373,19 @@
         $('#formContainer').empty();
     }
 
+    // Filter "Sudah Periksa Hari Ini"
+    $('#filterHariIni').on('click', function() {
+        // Reload table dengan parameter filter hari ini
+        table.ajax.url('{{ route("dewasa.data") }}?filter=hari_ini').load();
+        $(this).addClass('bg-indigo-800').siblings().removeClass('bg-indigo-800');
+    });
+
+    $('#filterSemua').on('click', function() {
+        // Kembali ke semua data
+        table.ajax.url('{{ route("dewasa.data") }}').load();
+        $(this).addClass('bg-gray-800').siblings().removeClass('bg-gray-800');
+    });
+
     // Pastikan modal tertutup saat load halaman
     document.addEventListener('DOMContentLoaded', () => {
         tutupModal();
@@ -368,11 +400,10 @@
     }
 
     $(document).ready(function() {
-        // INIT DATATABLE
         table = $('#dewasaTable').DataTable({
             processing: true,
             serverSide: false,
-            order:[],
+            order: [],
             ajax: {
                 url: '{{ route("dewasa.data") }}',
                 dataSrc: function(json) {
@@ -383,6 +414,14 @@
                 }
             },
             columns: [
+                {
+                    data: 'id',
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data) {
+                        return `<input type="checkbox" class="checkbox checkbox-success select-row" value="${data}" />`;
+                    }
+                },
                 { data: 'nik', className: 'text-sm' },
                 { data: 'nama', render: d => `<strong class="text-teal-700">${d}</strong>` },
                 { data: 'umur', className: 'text-center font-bold text-teal-600' },
@@ -392,34 +431,36 @@
                 { data: 'puma', className: 'text-center font-bold' },
                 { data: 'tbc', className: 'text-center' },
                 { data: 'rujuk', className: 'text-center font-bold text-sm' },
-                { data: 'periksa_id', visible: false },
                 {
                     data: null,
                     orderable: false,
                     className: 'text-center whitespace-nowrap',
                     render: function(d) {
-                        // make buttons compact
                         return `
                             <div class="flex gap-2 justify-center flex-wrap">
-                                <button type="button" 
-                                        onclick="bukaFormTambah(${d.id})"
-                                        class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-3 rounded-md transition">
+                                <!-- Periksa -->
+                                <button type="button"
+                                    onclick="bukaFormTambah(${d.id})"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-md transition">
                                     Periksa
                                 </button>
 
+                                <!-- Detail -->
                                 ${d.periksa_id ? `
-                                <button type="button" 
-                                        onclick="bukaDetail(${d.id})"
-                                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-md transition">
+                                <button type="button"
+                                    onclick="bukaDetail(${d.id})"
+                                    class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-3 rounded-md transition">
                                     Detail
                                 </button>` : ''}
 
-                                <a href="dewasa/${d.id}/export-excel"
-                                   class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1 px-3 rounded-md transition text-sm"
-                                   title="Export riwayat pemeriksaan warga ini ke Excel">
+                                <!-- Export -->
+                                <a href="/dewasa/${d.id}/export-excel"
+                                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-md transition text-sm flex items-center"
+                                    title="Export riwayat pemeriksaan warga ini ke Excel">
                                     Export
                                 </a>
-                            </div>`;
+                            </div>
+                            `;
                     }
                 }
             ],
@@ -433,6 +474,67 @@
             }
         });
     });
+
+    // ================================================
+    // FITUR EXPORT SELECTED - DEWASA
+    // ================================================
+
+    // Select All checkbox
+    $('#selectAll').on('change', function() {
+        $('.select-row').prop('checked', this.checked);
+        updateExportButton();
+    });
+
+    // Saat checkbox row diubah
+    $('#dewasaTable tbody').on('change', '.select-row', function() {
+        const total = $('.select-row').length;
+        const checked = $('.select-row:checked').length;
+        
+        $('#selectAll').prop('checked', total === checked && total > 0);
+        
+        // Highlight row yang dipilih
+        const $row = $(this).closest('tr');
+        if (this.checked) {
+            $row.addClass('bg-teal-50');
+        } else {
+            $row.removeClass('bg-teal-50');
+        }
+        
+        updateExportButton();
+    });
+
+    // Fungsi update tombol (dengan counter jumlah)
+    function updateExportButton() {
+        const count = $('.select-row:checked').length;
+        $('#exportSelected')
+            .prop('disabled', count === 0)
+            .text(count > 0 ? `Export Selected (${count}) ke Excel` : 'Export Selected ke Excel');
+    }
+
+    // Handler klik tombol Export Selected
+    $('#exportSelected').on('click', function() {
+        const selectedIds = [];
+        $('.select-row:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+
+        if (selectedIds.length === 0) {
+            Swal.fire('Info', 'Pilih minimal satu data untuk di-export', 'info');
+            return;
+        }
+
+        // Optional: batasi maksimal (misal 50) biar server tidak overload
+        // if (selectedIds.length > 50) {
+        //     Swal.fire('Batas Maksimal', 'Maksimal 50 data sekaligus', 'warning');
+        //     return;
+        // }
+
+        const idsParam = selectedIds.join(',');
+        window.location.href = `/dewasa/export-selected?ids=${idsParam}`;
+    });
+
+    // Inisialisasi awal
+    updateExportButton();
 
     // 1. Form Tambah Baru
     window.bukaFormTambah = function(wargaId) {

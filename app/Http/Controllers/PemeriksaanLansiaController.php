@@ -27,86 +27,70 @@ class PemeriksaanLansiaController extends Controller
         return view('page.lansia.index');
     }
 
-    public function data()
+    public function data(Request $request)
     {
-        $lansia = Warga::with('pemeriksaanLansiaTerakhir')
+        $query = Warga::with('pemeriksaanLansiaTerakhir')
             ->whereRaw('TIMESTAMPDIFF(YEAR, tanggal_lahir, CURDATE()) >= 60')
-            ->select('id', 'nik', 'nama', 'tanggal_lahir')
-            ->get();
+            ->select('id', 'nik', 'nama', 'tanggal_lahir');
+
+        // Filter "Sudah Periksa Hari Ini"
+        if ($request->query('filter') === 'hari_ini') {
+            $query->whereHas('pemeriksaanLansiaTerakhir', function ($q) {
+                $q->whereDate('tanggal_periksa', today());
+            });
+        }
+
+        $lansia = $query->get();
 
         $data = $lansia->map(function ($w) {
-
-            // -----------------------------
-            // Hitung umur (tahun & bulan)
-            // -----------------------------
+            // Hitung umur (tahun & bulan) — tetap sama
             $lahir = $w->tanggal_lahir ? Carbon::parse($w->tanggal_lahir) : null;
-
             if ($lahir) {
-                $diff  = $lahir->diff(now());
+                $diff = $lahir->diff(now());
                 $tahun = $diff->y;
                 $bulan = $diff->m;
-                $umur  = $tahun > 0 ? "{$tahun} thn {$bulan} bln" : "{$bulan} bln";
+                $umur = $tahun > 0 ? "{$tahun} thn {$bulan} bln" : "{$bulan} bln";
             } else {
                 $umur = '-';
             }
 
-            // -----------------------------
-            // Ambil pemeriksaan terakhir
-            // -----------------------------
             $p = $w->pemeriksaanLansiaTerakhir;
 
-            // -----------------------------
-            // Hitung nilai SKILAS positif
-            // -----------------------------
             $skilasPositif = 0;
-
             if ($p) {
                 $skilasPositif = collect($p->getAttributes())
                     ->filter(function ($value, $key) {
-                        return str_starts_with($key, 'skil_') 
-                            && !in_array($key, [
-                                'skil_rujuk_otomatis',
-                                'skil_rujuk_manual',
-                                'skil_edukasi',
-                                'skil_catatan'
-                            ])
+                        return str_starts_with($key, 'skil_')
+                            && !in_array($key, ['skil_rujuk_otomatis', 'skil_rujuk_manual', 'skil_edukasi', 'skil_catatan'])
                             && $value == 1;
                     })
                     ->count();
             }
 
-            // -----------------------------
-            // Return API row untuk DataTables
-            // -----------------------------
             return [
-                'id'          => $w->id,
-                'nik'         => $w->nik,
-                'nama'        => $w->nama,
-                'umur'        => $umur,
-
-                'terakhir'    => $p
+                'id' => $w->id,
+                'nik' => $w->nik,
+                'nama' => $w->nama,
+                'umur' => $umur,
+                'terakhir' => $p
                     ? Carbon::parse($p->tanggal_periksa)->format('d-m-Y')
                     : '<span class="text-red-600 font-bold">Belum pernah diperiksa</span>',
-
                 'aks_total_skor' => $p?->aks_total_skor ?? '-',
-                'aks_kategori'   => $p?->aks_kategori ?? '-',
-
+                'aks_kategori' => $p?->aks_kategori ?? '-',
                 'skilas_positif' => $skilasPositif > 0
                     ? '<span class="text-red-600 font-bold">+' . $skilasPositif . '</span>'
                     : '<span class="text-gray-500">-</span>',
-
                 'perlu_rujuk' => $p && (
                     $p->aks_perlu_rujuk ||
                     $p->skil_rujuk_otomatis ||
                     $p->skil_rujuk_manual
                 ),
-
                 'periksa_id' => $p?->id,
             ];
         });
 
         return response()->json([
-            'data'         => $data,
+            'data' => $data,
             'total_lansia' => $lansia->count(),
         ]);
     }
@@ -234,6 +218,13 @@ class PemeriksaanLansiaController extends Controller
         }
 
         $data['skil_rujuk_otomatis'] = $skilRujuk;
+
+        // RUJUK MANUAL
+        // AKS
+        $data['aks_rujuk_manual'] = (int) $request->input('aks_rujuk_manual', 0);
+
+        // SKILAS
+        $data['skil_rujuk_manual'] = (int) $request->input('skil_rujuk_manual', 0);
 
         // ==================== CREATE vs UPDATE ====================
         if ($lansia && $lansia->exists) {
@@ -1396,6 +1387,49 @@ class PemeriksaanLansiaController extends Controller
         ]);
     }
 
+    public function exportSelected(Request $request)
+    {
+        $ids = $request->query('ids', '');
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada data yang dipilih');
+        }
+
+        $idsArray = array_filter(explode(',', $ids), 'is_numeric');
+
+        $wargas = Warga::with('pemeriksaanLansiaAll')
+            ->whereIn('id', $idsArray)
+            ->get();
+
+        if ($wargas->isEmpty()) {
+            return back()->with('error', 'Data lansia tidak ditemukan');
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Kartu Lansia Terpilih');
+
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri')->setSize(10);
+
+        $this->setColumnWidths($sheet); // panggil fungsi yang sudah ada
+
+        $offset = 0;
+        $jarakAntarKartu = 10;
+
+        foreach ($wargas as $warga) {
+            $lastRow = $this->buildKartuLansiaOffset($sheet, $warga, $offset);
+            $offset = $lastRow + $jarakAntarKartu;
+        }
+
+        $filename = "Kartu_Lansia_AKS_SKILAS_Terpilih_" . now()->format('Ymd_His') . ".xlsx";
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+    
     public function exportLansiaExcelSemua()
     {
         $wargas = Warga::with('pemeriksaanLansiaAll')

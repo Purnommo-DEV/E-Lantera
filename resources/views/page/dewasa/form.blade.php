@@ -68,6 +68,7 @@
         <!-- Hidden Fields -->
         <input type="hidden" name="jk_puma" id="jk_puma">
         <input type="hidden" name="usia_puma" id="usia_puma">
+        <input type="hidden" name="umur_hidden" id="umur_hidden">
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -202,13 +203,13 @@
             <label class="label font-bold text-sm md:text-lg">Merokok</label>
             <select name="merokok" id="merokok" class="select select-bordered w-full text-sm md:text-lg">
                 <option value="0" {{ ($periksa->merokok ?? '0') == '0' ? 'selected' : '' }}>
-                    Tidak merokok atau &lt;20 batang/hari (=0)
+                    Tidak merokok atau &lt;20 batang/tahun (=0)
                 </option>
                 <option value="1" {{ ($periksa->merokok ?? '') == '1' ? 'selected' : '' }}>
-                    20–39 batang/hari (=1)
+                    20–39 batang/tahun (=1)
                 </option>
                 <option value="2" {{ ($periksa->merokok ?? '') == '2' ? 'selected' : '' }}>
-                    ≥40 batang/hari (=2)
+                    ≥40 batang/tahun (=2)
                 </option>
             </select>
         </div>
@@ -314,16 +315,36 @@
             <textarea name="catatan"
                       class="textarea textarea-bordered h-28 md:h-32 w-full text-sm md:text-base">{{ $periksa->catatan ?? '' }}</textarea>
         </div>
-        <div class="flex justify-end items-end">
-            <label class="cursor-pointer label gap-4 md:gap-6 text-lg md:text-2xl">
-                <span class="font-bold text-red-600 break-words max-w-[14rem] md:max-w-none">
-                    RUJUK MANUAL KE PUSKESMAS
-                </span>
-                <input type="checkbox" name="rujuk_puskesmas"
-                       {{ isset($periksa) && $periksa->rujuk_puskesmas ? 'checked' : '' }}
-                       class="checkbox checkbox-error checkbox-md md:checkbox-lg">
-            </label>
-        </div>
+    </div>
+
+    {{-- ================= RUJUK MANUAL KE PUSKESMAS ================= --}}
+    <div class="mt-10 p-6 bg-white rounded-2xl border-2 border-red-300">
+        <label
+            class="flex items-center gap-4 p-4 rounded-xl border-2 border-red-200
+                   cursor-pointer transition
+                   hover:bg-red-50
+                   has-[:checked]:bg-red-100
+                   has-[:checked]:border-red-400">
+
+            <input
+                type="checkbox"
+                name="rujuk_manual_puskesmas"
+                value="1"
+                class="checkbox checkbox-error checkbox-lg"
+                @checked(old(
+                    'rujuk_manual_puskesmas',
+                    $periksa->rujuk_manual_puskesmas ?? false
+                ))>
+
+            <span class="font-bold text-red-600 text-lg md:text-2xl leading-snug">
+                Rujuk Manual ke Puskesmas
+            </span>
+        </label>
+
+        <p class="mt-3 text-sm text-gray-600">
+            Centang jika petugas memutuskan <b>rujuk langsung ke Puskesmas</b>
+            meskipun hasil skrining tidak mewajibkan.
+        </p>
     </div>
 
     <div class="modal-action justify-end gap-4 md:gap-8 mt-8 md:mt-12">
@@ -389,6 +410,7 @@
 
             document.getElementById('skor_usia_display').textContent = skorUsia;
             document.getElementById('usia_puma').value = skorUsia;
+            document.getElementById('umur_hidden').value = usia;
             document.getElementById('jk_puma').value = "{{ $warga->jenis_kelamin }}" === "Laki-laki" ? 1 : 0;
 
             // === IMT ===
@@ -419,12 +441,45 @@
                 document.getElementById('kategori_imt_display').value = 'Isi BB & TB';
             }
 
-            // === TD ===
+            // === TD (sesuai aturan asli kamu) ===
             const sist = parseInt(document.getElementById('sistole')?.value) || 0;
             const dias = parseInt(document.getElementById('diastole')?.value) || 0;
-            const td = sist >= 140 || dias >= 90 ? 'Tinggi (T)' : (sist < 90 || dias < 60 ? 'Rendah (R)' : 'Normal (N)');
-            document.getElementById('td_hasil').value = td;
-            document.getElementById('td_kategori').value = td;
+            const umur = parseInt(document.getElementById('umur_hidden')?.value) || 0;
+
+            let td_kat = 'Normal (N)';
+            let td_warna = 'bg-green-100 text-green-800';
+
+            if (umur >= 60) {  // Lansia
+                if (sist < 90 || dias < 60) {
+                    td_kat = 'Rendah (R)';
+                    td_warna = 'bg-red-100 text-red-800';
+                } else if (sist > 140) {  // Tinggi >140 sistolik (seperti yang kamu tulis)
+                    td_kat = 'Tinggi (T)';
+                    td_warna = 'bg-orange-100 text-orange-800';
+                } else {
+                    td_kat = 'Normal (N)';
+                    td_warna = 'bg-green-100 text-green-800';
+                }
+            } else {  // Dewasa <60 thn
+                if (sist < 90 || dias < 60) {
+                    td_kat = 'Rendah (R)';
+                    td_warna = 'bg-red-100 text-red-800';
+                } else if (sist >= 130 || dias >= 90) {
+                    td_kat = 'Tinggi (T)';
+                    td_warna = 'bg-orange-100 text-orange-800';
+                } else {
+                    td_kat = 'Normal (N)';
+                    td_warna = 'bg-green-100 text-green-800';
+                }
+            }
+
+            document.getElementById('td_hasil').value = td_kat;
+            document.getElementById('td_kategori').value = td_kat;
+
+            const tdEl = document.getElementById('td_hasil');
+            if (tdEl) {
+                tdEl.className = `input input-bordered font-bold text-lg md:text-xl text-center w-full ${td_warna}`;
+            }
 
             // === GULA ===
             const gula = parseInt(document.getElementById('gula_darah')?.value) || 0;

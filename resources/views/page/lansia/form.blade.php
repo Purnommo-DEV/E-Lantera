@@ -236,7 +236,54 @@
                     </div>
                 </div>
             </div>
+
         </div>
+
+        {{-- ================= AKS - RUJUK MANUAL ================= --}}
+        <div class="mt-10 p-6 bg-white rounded-2xl border-2 border-indigo-300">
+            <h3 class="text-xl md:text-2xl font-bold text-indigo-800 mb-2">
+                Rujuk Manual (AKS)
+            </h3>
+
+            <p class="text-sm text-gray-600 mb-6">
+                <b>Ya</b> = paksa rujuk meskipun hasil AKS tidak rujuk<br>
+                <b>Tidak</b> = ikuti hasil AKS otomatis
+            </p>
+
+            @php
+                $aksManual = old(
+                    'aks_rujuk_manual',
+                    $lansia->aks_rujuk_manual ?? 0
+                );
+            @endphp
+
+            <div class="flex gap-8">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="aks_rujuk_manual"
+                        value="1"
+                        class="radio radio-error"
+                        @checked(old('aks_rujuk_manual', $lansia->aks_rujuk_manual ?? 0) == 1)>
+                    <span class="font-bold text-red-600 text-lg">
+                        Ya (Paksa Rujuk)
+                    </span>
+                </label>
+
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="aks_rujuk_manual"
+                        value="0"
+                        class="radio radio-success"
+                        @checked(old('aks_rujuk_manual', $lansia->aks_rujuk_manual ?? 0) == 0)>
+                    <span class="font-bold text-green-600 text-lg">
+                        Tidak (Otomatis)
+                    </span>
+                </label>
+            </div>
+        </div>
+
     </div>
 
     {{-- ================= SKILAS ================= --}}
@@ -397,16 +444,67 @@
         </div>
     </div>
 
+    {{-- ================= SKILAS - RUJUK MANUAL ================= --}}
+    <div class="mt-10 p-6 bg-white rounded-2xl border-2 border-red-300">
+        <h3 class="text-xl md:text-2xl font-bold text-red-800 mb-2">
+            Rujuk Manual (SKILAS)
+        </h3>
+
+        <p class="text-sm text-gray-600 mb-6">
+            <b>Ya</b> = paksa rujuk meskipun hasil SKILAS negatif<br>
+            <b>Tidak</b> = ikuti hasil SKILAS otomatis
+        </p>
+
+        @php
+            $skilManual = old(
+                'skil_rujuk_manual',
+                $lansia->skil_rujuk_manual ?? 0
+            );
+        @endphp
+
+        <div class="flex gap-8">
+            <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                    type="radio"
+                    name="skil_rujuk_manual"
+                    value="1"
+                    class="radio radio-error"
+                    @checked(old('skil_rujuk_manual', $lansia->skil_rujuk_manual ?? 0) == 1)>
+                <span class="font-bold text-red-600 text-lg">
+                    Ya (Paksa Rujuk)
+                </span>
+            </label>
+
+            <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                    type="radio"
+                    name="skil_rujuk_manual"
+                    value="0"
+                    class="radio radio-success"
+                    @checked(old('skil_rujuk_manual', $lansia->skil_rujuk_manual ?? 0) == 0)>
+                <span class="font-bold text-green-600 text-lg">
+                    Tidak (Otomatis)
+                </span>
+            </label>
+        </div>
+
+    </div>
+
+
 </div>
 
 
     {{-- ================= BUTTON ================= --}}
     <div class="flex justify-center gap-8 mt-12">
-        <button type="button" onclick="tutupModal()" class="btn btn-lg btn-ghost">
-            Batal
-        </button>
-        <button class="btn btn-primary btn-md md:btn-lg text-base md:text-xl px-8 md:px-16">
-            SIMPAN PEMERIKSAAN
+        <button
+            type="submit"
+            class="btn btn-primary btn-md md:btn-lg text-base md:text-xl px-8 md:px-16 flex items-center gap-3"
+            id="btnSubmit">
+
+            <span class="btn-text">SIMPAN PEMERIKSAAN</span>
+
+            <!-- Spinner -->
+            <span class="loading loading-spinner loading-sm hidden"></span>
         </button>
     </div>
 </form>

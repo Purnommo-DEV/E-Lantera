@@ -25,16 +25,34 @@
 
     {{-- TABEL DATATABLES --}}
     <div class="p-8">
-        <div class="flex justify-end mb-4">
-            <a href="{{ route('lansia.exportSemua') }}"
-               class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700">
-                Export Excel Semua
-            </a>
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+            <div class="flex flex-wrap gap-3">
+                <button id="exportSelected" 
+                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition" 
+                        disabled>
+                    Export Selected ke Excel
+                </button>
+                <a href="{{ route('lansia.exportSemua') }}" 
+                   class="btn btn-info">
+                    Export Semua
+                </a>
+                <button id="filterHariIni" 
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition">
+                    Sudah Periksa Hari Ini
+                </button>
+                <button id="filterSemua" 
+                        class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition">
+                    Tampilkan Semua
+                </button>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table id="lansiaTable" class="table table-zebra w-full">
-                <thead class="bg-emerald-100 text-emerald-900">
+            <thead class="bg-emerald-100 text-emerald-900">
                 <tr>
+                    <th class="text-center w-10">
+                        <input type="checkbox" id="selectAll" class="checkbox checkbox-success checkbox-sm" />
+                    </th>
                     <th>#</th>
                     <th>NIK</th>
                     <th>Nama</th>
@@ -46,7 +64,7 @@
                     <th>Status</th>
                     <th class="text-center">Aksi</th>
                 </tr>
-                </thead>
+            </thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -324,6 +342,12 @@
         border-radius: 9999px;
     }
     
+    .radio-error:checked {
+        box-shadow: 0 0 0 4px rgba(239,68,68,0.4);
+    }
+    .radio-success:checked {
+        box-shadow: 0 0 0 4px rgba(34,197,94,0.4);
+    }
 </style>
 @endpush
 
@@ -336,6 +360,7 @@
     // ==================================================
     // SEMUA FUNGSI GLOBAL — HARUS DI ATAS DOMContentLoaded
     // ==================================================
+    let table;
 
     // Modal DaisyUI
     window.bukaModal = function () {
@@ -364,6 +389,19 @@
             if (input && input !== el) input.checked = false;
         });
     };
+
+    // Filter "Sudah Periksa Hari Ini" untuk Lansia
+    $('#filterHariIni').on('click', function() {
+        table.ajax.url('{{ route("lansia.data") }}?filter=hari_ini').load();
+        $(this).addClass('bg-indigo-800').removeClass('bg-indigo-600');
+        $('#filterSemua').removeClass('bg-gray-800').addClass('bg-gray-600');
+    });
+
+    $('#filterSemua').on('click', function() {
+        table.ajax.url('{{ route("lansia.data") }}').load();
+        $(this).addClass('bg-gray-800').removeClass('bg-gray-600');
+        $('#filterHariIni').removeClass('bg-indigo-800').addClass('bg-indigo-600');
+    });
 
     // AKS Auto Hitung — dipanggil setiap form dimuat
     window.initAksCalculator = function () {
@@ -459,7 +497,7 @@
         const exportUrlTemplate     = @json(route('lansia.export', ['warga' => '__ID__']));
 
         // ==================== DATATABLES ====================
-        const table = $('#lansiaTable').DataTable({
+        table = $('#lansiaTable').DataTable({
             processing: true,
             serverSide: false,
             ajax: {
@@ -474,6 +512,14 @@
                 }
             },
             columns: [
+                {
+                    data: null,
+                    orderable: false,
+                    className: 'text-center w-10',
+                    render: function (data, type, row) {
+                        return `<input type="checkbox" class="checkbox checkbox-success select-row" value="${row.id}" />`;
+                    }
+                },
                 { data: null, render: (data, type, row, meta) => meta.row + 1, className: 'text-center' },
                 { data: 'nik', className: 'text-sm' },
                 { data: 'nama', render: d => `<strong class="text-emerald-700">${d}</strong>` },
@@ -525,6 +571,54 @@
             }
         });
 
+        // Select All
+        $('#selectAll').on('click', function () {
+            $('.select-row').prop('checked', this.checked);
+            updateExportButton();
+        });
+
+        // Saat row checkbox change
+        $('#lansiaTable tbody').on('change', '.select-row', function () {
+            const total = $('.select-row').length;
+            const checked = $('.select-row:checked').length;
+            $('#selectAll').prop('checked', total === checked && total > 0);
+            updateExportButton();
+
+            // Optional: highlight row selected
+            const $row = $(this).closest('tr');
+            if (this.checked) {
+                $row.addClass('bg-emerald-50');
+            } else {
+                $row.removeClass('bg-emerald-50');
+            }
+        });
+
+        // Update tombol (tampilkan jumlah selected)
+        function updateExportButton() {
+            const count = $('.select-row:checked').length;
+            $('#exportSelected')
+                .prop('disabled', count === 0)
+                .text(count > 0 ? `Export Selected (${count}) ke Excel` : 'Export Selected ke Excel');
+        }
+
+        // Handler klik export
+        $('#exportSelected').on('click', function () {
+            const selectedIds = $('.select-row:checked').map(function () {
+                return $(this).val();
+            }).get();
+
+            if (selectedIds.length === 0) {
+                Swal.fire('Info', 'Pilih minimal satu data lansia', 'info');
+                return;
+            }
+
+            const idsParam = selectedIds.join(',');
+            window.location.href = `/lansia/export-selected?ids=${idsParam}`;
+        });
+
+        // Init pertama kali
+        updateExportButton();
+        
         // ==================== KLIK TOMBOL (Periksa / Riwayat / Edit) ====================
         $(document).on('click', '.btn-periksa, .btn-riwayat, .btn-edit-periksa', function(e) {
             console.log('CLICK BUTTON:', this.className);
@@ -615,12 +709,20 @@
             e.preventDefault();
 
             const form = this;
-            const submitBtn = form.querySelector('button[type="submit"]');
+            const submitBtn = form.querySelector('[type="submit"]');
+
+            const spinner = submitBtn?.querySelector('.loading');
+            const btnText = submitBtn?.querySelector('.btn-text');
+
             const fd = new FormData(form);
             const url = form.action;
 
-            submitBtn.disabled = true;
-            submitBtn.classList.add('loading');
+            // ================== AKTIFKAN LOADING ==================
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                spinner?.classList.remove('hidden');
+                btnText && (btnText.textContent = 'Menyimpan...');
+            }
 
             $.ajax({
                 url: url,
@@ -628,11 +730,18 @@
                 data: fd,
                 processData: false,
                 contentType: false,
+
                 success: function () {
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove('loading');
+                    // ================== MATIKAN LOADING ==================
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        spinner?.classList.add('hidden');
+                        btnText && (btnText.textContent = 'SIMPAN PEMERIKSAAN');
+                    }
+
                     tutupModal();
-                    table.ajax.reload(null, false);
+                    $('#lansiaTable').DataTable().ajax.reload(null, false);
+
                     Swal.fire({
                         icon: 'success',
                         title: 'Sukses!',
@@ -641,9 +750,14 @@
                         showConfirmButton: false
                     });
                 },
+
                 error: function (xhr) {
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove('loading');
+                    // ================== MATIKAN LOADING ==================
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        spinner?.classList.add('hidden');
+                        btnText && (btnText.textContent = 'SIMPAN PEMERIKSAAN');
+                    }
 
                     // Hapus error lama
                     $('.text-red-500').remove();
@@ -653,8 +767,11 @@
                         $.each(xhr.responseJSON.errors, function (field, msgs) {
                             const input = $(`[name="${field}"]`);
                             input.addClass('input-error border-red-500');
-                            input.after(`<div class="text-red-500 text-xs mt-1">${msgs[0]}</div>`);
+                            input.after(
+                                `<div class="text-red-500 text-xs mt-1">${msgs[0]}</div>`
+                            );
                         });
+
                         Swal.fire({
                             icon: 'error',
                             title: 'Validasi Gagal',
@@ -662,6 +779,7 @@
                             timer: 2000,
                             showConfirmButton: false
                         });
+
                     } else {
                         Swal.fire({
                             icon: 'error',

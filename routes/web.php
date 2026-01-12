@@ -60,6 +60,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{warga}/riwayat', [PemeriksaanDewasaLansiaController::class, 'riwayat'])->name('riwayat');
         Route::get('/{warga}/export-excel', [PemeriksaanDewasaLansiaController::class, 'exportKartuExcelSatuan'])->name('exportSatuan');
         Route::get('/export-excel-all', [PemeriksaanDewasaLansiaController::class, 'exportKartuExcelSemua'])->name('exportSemua');
+        Route::get('/export-selected', [PemeriksaanDewasaLansiaController::class, 'exportSelected'])->name('dewasa.exportSelected');
     });
 
     // ===========================================
@@ -76,6 +77,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{lansia}', [PemeriksaanLansiaController::class, 'destroy'])->name('destroy');
         Route::get('/{warga}/export-excel', [PemeriksaanLansiaController::class, 'exportLansiaExcelSatuan'])->name('export');
         Route::get('/export-excel-all', [PemeriksaanLansiaController::class, 'exportLansiaExcelSemua'])->name('exportSemua');
+        Route::get('/export-selected', [PemeriksaanLansiaController::class, 'exportSelected'])->name('lansia.exportSelected');
     });
 
     // ===========================================

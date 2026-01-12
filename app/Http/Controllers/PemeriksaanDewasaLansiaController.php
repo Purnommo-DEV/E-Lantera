@@ -25,14 +25,22 @@ class PemeriksaanDewasaLansiaController extends Controller
         return view('page.dewasa.index');
     }
 
-    public function data()
+    public function data(Request $request)
     {
-        $warga = Warga::whereRaw('TIMESTAMPDIFF(YEAR, tanggal_lahir, CURDATE()) >= 15')
+        $query = Warga::whereRaw('TIMESTAMPDIFF(YEAR, tanggal_lahir, CURDATE()) >= 15')
             ->select('id', 'nik', 'nama', 'tanggal_lahir')
-            ->with('pemeriksaanDewasaLansiaTerakhir') // ⬅ TANPA select kolom di sini
-            ->orderByDesc('id') // 🔥 DATA TERBARU DI ATAS
-            ->get();
+            ->with('pemeriksaanDewasaLansiaTerakhir')
+            ->orderByDesc('id');
 
+        // Filter "Sudah Periksa Hari Ini"
+        if ($request->query('filter') === 'hari_ini') {
+            $query->whereHas('pemeriksaanDewasaLansiaTerakhir', function ($q) {
+                $q->whereDate('tanggal_periksa', today());
+            });
+        }
+
+        $warga = $query->get();
+        
         $data = 
             $warga
             ->map(function ($w) {
@@ -962,11 +970,37 @@ class PemeriksaanDewasaLansiaController extends Controller
             $sheet->setCellValue("D{$row22}", $imt);
             $sheet->setCellValue("E{$row22}", $periksa->lingkar_perut ?? '');
             $sheet->setCellValue("F{$row22}", $periksa->lingkar_lengan_atas ?? '');
-            $sheet->setCellValue("G{$row22}", ($periksa->sistole ?? '').'/'.($periksa->diastole ?? ''));
-            $sheet->setCellValue(
-                "H{$row22}",
-                ($periksa->sistole >= 140 || $periksa->diastole >= 90) ? 'Tinggi' : 'Normal'
-            );
+
+            // Hitung umur warga (gunakan helper_umur atau Carbon)
+            $umur = $warga->tanggal_lahir ? helper_umur($warga->tanggal_lahir) : 0;  // umur dalam tahun
+
+            $sistole = $periksa->sistole ?? 0;
+            $diastole = $periksa->diastole ?? 0;
+
+            $hasil_td = 'Normal';
+
+            if ($umur >= 60) {  // Lansia
+                if ($sistole < 90 || $diastole < 60) {
+                    $hasil_td = 'Rendah';
+                } elseif ($sistole > 140) {  // Tinggi >140 sistolik (sesuai pesanmu)
+                    $hasil_td = 'Tinggi';
+                } else {
+                    $hasil_td = 'Normal';
+                }
+            } else {  // Dewasa <60 thn
+                if ($sistole < 90 || $diastole < 60) {
+                    $hasil_td = 'Rendah';
+                } elseif ($sistole >= 130 || $diastole >= 90) {
+                    $hasil_td = 'Tinggi';
+                } else {
+                    $hasil_td = 'Normal';
+                }
+            }
+
+            // Tulis ke sheet
+            $sheet->setCellValue("G{$row22}", ($sistole ?: '').'/'.($diastole ?: ''));
+            $sheet->setCellValue("H{$row22}", $hasil_td);
+
             $sheet->setCellValue("I{$row22}", $periksa->gula_darah ?? '');
             $sheet->setCellValue(
                 "J{$row22}",
@@ -981,7 +1015,6 @@ class PemeriksaanDewasaLansiaController extends Controller
 
             // PUMA
             $jkSkor   = ($warga->jenis_kelamin === 'Laki-laki' || $warga->jenis_kelamin === 'L') ? 1 : 0;
-            $umur     = $warga->tanggal_lahir ? helper_umur($warga->tanggal_lahir) : 0;
             $usiaSkor = $umur >= 60 ? 2 : ($umur >= 50 ? 1 : 0);
 
             $merokokSkor = match ($periksa->merokok ?? 0) {
@@ -1129,6 +1162,49 @@ class PemeriksaanDewasaLansiaController extends Controller
         $writer = new Xlsx($spreadsheet);
         $writer->save('php://output');
         exit;
+    }
+
+
+    public function exportSelected(Request $request)
+    {
+        $ids = $request->query('ids');
+
+        if (!$ids) {
+            return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
+        }
+
+        $wargaIds = explode(',', $ids);
+
+        // Ambil data warga beserta riwayat pemeriksaannya
+        $wargas = Warga::with('pemeriksaanDewasaLansiaAll')
+            ->whereIn('id', $wargaIds)
+            ->whereRaw('TIMESTAMPDIFF(YEAR, tanggal_lahir, CURDATE()) >= 15')
+            ->get();
+
+        if ($wargas->isEmpty()) {
+            return redirect()->back()->with('error', 'Data tidak ditemukan.');
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Kartu Dewasa Terpilih');
+
+        $offset = 0;
+        $jarakAntarKartu = 5; // baris kosong antar kartu
+
+        foreach ($wargas as $warga) {
+            $lastRow = $this->buildKartuSheetOffset($sheet, $warga, $offset);
+            $offset = $lastRow + $jarakAntarKartu;
+        }
+
+        $filename = "Kartu_Pemeriksaan_Dewasa_Lansia_Terpilih_" . date('Ymd_His') . ".xlsx";
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     // 1 FILE BANYAK DATA WARGA DEWASA & LANSIA BESERTA SEMUA PEMERIKSAAN
@@ -1769,14 +1845,40 @@ class PemeriksaanDewasaLansiaController extends Controller
                 
             $sheet->setCellValue("B{$row23}", $periksa->berat_badan ?? '');
             $sheet->setCellValue("C{$row23}", $periksa->tinggi_badan ?? '');
-            $sheet->setCellValue("D{$row23}", $kategori);
+            $sheet->setCellValue("D{$row23}", $imt);
             $sheet->setCellValue("E{$row23}", $periksa->lingkar_perut ?? '');
             $sheet->setCellValue("F{$row23}", $periksa->lingkar_lengan_atas ?? '');
-            $sheet->setCellValue("G{$row23}", ($periksa->sistole ?? '').'/'.($periksa->diastole ?? ''));
-            $sheet->setCellValue(
-                "H{$row23}",
-                ($periksa->sistole >= 140 || $periksa->diastole >= 90) ? 'Tinggi' : 'Normal'
-            );
+
+            // Hitung umur warga (gunakan helper_umur atau Carbon)
+            $umur = $warga->tanggal_lahir ? helper_umur($warga->tanggal_lahir) : 0;  // umur dalam tahun
+
+            $sistole = $periksa->sistole ?? 0;
+            $diastole = $periksa->diastole ?? 0;
+
+            $hasil_td = 'Normal';
+
+            if ($umur >= 60) {  // Lansia
+                if ($sistole < 90 || $diastole < 60) {
+                    $hasil_td = 'Rendah';
+                } elseif ($sistole > 140) {  // Tinggi >140 sistolik (sesuai pesanmu)
+                    $hasil_td = 'Tinggi';
+                } else {
+                    $hasil_td = 'Normal';
+                }
+            } else {  // Dewasa <60 thn
+                if ($sistole < 90 || $diastole < 60) {
+                    $hasil_td = 'Rendah';
+                } elseif ($sistole >= 130 || $diastole >= 90) {
+                    $hasil_td = 'Tinggi';
+                } else {
+                    $hasil_td = 'Normal';
+                }
+            }
+
+            // Tulis ke sheet
+            $sheet->setCellValue("G{$row23}", ($sistole ?: '').'/'.($diastole ?: ''));
+            $sheet->setCellValue("H{$row23}", $hasil_td);
+
             $sheet->setCellValue("I{$row23}", $periksa->gula_darah ?? '');
             $sheet->setCellValue(
                 "J{$row23}",
