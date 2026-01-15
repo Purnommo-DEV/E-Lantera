@@ -8,7 +8,8 @@
     <link rel="icon" href="{{ asset('elantera.png') }}" type="image/png">
     
     @vite('resources/css/app.css')
-
+    @include('components.pwa-head')
+    
     <style>
         /* Animasi halus */
         .fade-in {

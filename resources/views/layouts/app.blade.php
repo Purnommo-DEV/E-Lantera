@@ -9,9 +9,7 @@
 
     <!-- Favicon -->
     <link rel="icon" href="{{ asset('elantera.png') }}" type="image/png">
-    <link rel="manifest" href="{{ asset('manifest.json') }}" crossorigin="use-credentials">
-    <meta name="theme-color" content="#1f2937">
-    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('pwa/icon-192.png') }}">
+
     <!-- Font Poppins (sama persis seperti sebelumnya) -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -29,6 +27,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
+    @include('components.pwa-head')
 
     <style>
         body { font-family: 'Poppins', sans-serif; }
