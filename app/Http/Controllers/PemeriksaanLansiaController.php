@@ -187,13 +187,15 @@ class PemeriksaanLansiaController extends Controller
             'orientasi_waktu_tempat', 'mengulang_ketiga_kata', 'tes_berdiri_dari_kursi',
             'bb_berkurang_3kg_dalam_3bulan', 'hilang_nafsu_makan', 'lla_kurang_21cm',
             'masalah_pada_mata', 'tes_melihat', 'perasaan_sedih_tertekan',
-            'sedikit_minat_atau_kenikmatan', 'imunisasi_covid'
+            'sedikit_minat_atau_kenikmatan'
         ];
 
         foreach ($skilFields as $f) {
             $data["skil_{$f}"] = $request->has("skil_{$f}") ? 1 : 0;
         }
 
+        $data['skil_imunisasi_covid'] = $request->input('skil_imunisasi_covid', 0) == 1 ? 1 : 0;
+        
         // ==================== KHUSUS ====================
         $data['skil_tes_bisik'] = $request->has('skil_tes_bisik') ? 1 : 0;
         $data['skil_tidak_dapat_dilakukan'] = $request->has('skil_tidak_dapat_dilakukan') ? 1 : 0;

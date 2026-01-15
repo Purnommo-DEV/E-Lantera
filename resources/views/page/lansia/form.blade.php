@@ -320,9 +320,6 @@
                     ['field' => 'perasaan_sedih_tertekan', 'label' => 'Perasaan sedih, tertekan, atau putus asa'],
                     ['field' => 'sedikit_minat_atau_kenikmatan', 'label' => 'Sedikit minat atau kesenangan dalam melakukan sesuatu'],
                 ]],
-                ['title' => 'Status Imunisasi', 'items' => [
-                    ['field' => 'imunisasi_covid', 'label' => 'Imunisasi COVID 19'],
-                ]],
             ];
         @endphp
 
@@ -396,6 +393,35 @@
             @endforeach
         </div>
         
+    </div>
+
+    {{-- ================= STATUS IMUNISASI COVID-19 (TERPISAH) ================= --}}
+    <div class="bg-gradient-to-r from-blue-50 to-cyan-50 p-5 md:p-10 rounded-2xl md:rounded-3xl border-2 md:border-4 border-blue-300 mt-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-center text-blue-800 mb-6">
+            Status Imunisasi COVID-19
+        </h2>
+
+        <div class="bg-white p-6 rounded-xl shadow-lg max-w-md mx-auto">
+            <p class="text-center font-medium text-gray-700 mb-6">
+                Apakah lansia sudah mendapatkan imunisasi COVID-19 (lengkap)?
+            </p>
+            <div class="flex justify-center gap-10">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="skil_imunisasi_covid" value="1" class="radio radio-success radio-lg"
+                           {{ old('skil_imunisasi_covid', $lansia->skil_imunisasi_covid ?? 0) == 1 ? 'checked' : '' }}>
+                    <span class="text-xl font-bold text-green-600">Ya</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="skil_imunisasi_covid" value="0" class="radio radio-error radio-lg"
+                           {{ old('skil_imunisasi_covid', $lansia->skil_imunisasi_covid ?? 0) == 0 ? 'checked' : '' }}>
+                    <span class="text-xl font-bold text-red-600">Tidak</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="mt-4 text-center text-sm text-gray-600">
+            Status ini tidak mempengaruhi hasil rujuk SKILAS.
+        </div>
     </div>
 
     {{-- ================= HASIL SKILAS ================= --}}
