@@ -72,34 +72,56 @@ class WargaController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'nik' => 'required|size:16|unique:warga,nik',
-            'nama' => 'required|max:100',
-            'tanggal_lahir' => 'required|date',
-            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'alamat' => 'required',
-            'dusun' => 'required',
-            'rt' => 'required|size:3',
-            'rw' => 'required|size:3',
+        $validated = $request->validate([
+            'nik'           => ['required', 'string', 'digits:16', 'unique:warga,nik'],
+            'nama'          => ['required', 'string', 'max:100'],
+            'tanggal_lahir' => ['required', 'date'],
+            'jenis_kelamin' => ['required', 'in:Laki-laki,Perempuan'],
+            'dusun'         => ['required', 'string'],
+            'rt'            => ['required', 'string', 'digits:3'],
+            'rw'            => ['required', 'string', 'digits:3'],
+            'alamat'        => ['required', 'string'],
+            'no_hp'         => ['nullable', 'string', 'max:15'],
+            'status_nikah'  => ['nullable', 'in:Menikah,Tidak Menikah'],
+            'pekerjaan'     => ['nullable', 'string', 'max:100'],
+            'catatan'       => ['nullable', 'string'],
         ]);
 
-        Warga::create($request->all());
-        return response()->json(['success' => true, 'message' => 'Warga berhasil ditambahkan!']);
+        Warga::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Warga berhasil ditambahkan!'
+        ], 201);
     }
 
     public function update(Request $request, $id)
     {
         $warga = Warga::findOrFail($id);
-        $request->validate([
-            'nik' => "required|size:16|unique:warga,nik,$id",
-            'nama' => 'required|max:100',
-            'tanggal_lahir' => 'required|date',
-            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
+
+        $validated = $request->validate([
+            'nik'           => ['required', 'string', 'digits:16', "unique:warga,nik,{$id}"],
+            'nama'          => ['required', 'string', 'max:100'],
+            'tanggal_lahir' => ['required', 'date'],
+            'jenis_kelamin' => ['required', 'in:Laki-laki,Perempuan'],
+            'dusun'         => ['required', 'string'],
+            'rt'            => ['required', 'string', 'digits:3'],
+            'rw'            => ['required', 'string', 'digits:3'],
+            'alamat'        => ['required', 'string'],
+            'no_hp'         => ['nullable', 'string', 'max:15'],
+            'status_nikah'  => ['nullable', 'in:Menikah,Tidak Menikah'],
+            'pekerjaan'     => ['nullable', 'string', 'max:100'],
+            'catatan'       => ['nullable', 'string'],
         ]);
 
-        $warga->update($request->all());
-        return response()->json(['success' => true, 'message' => 'Data warga diperbarui!']);
+        $warga->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data warga diperbarui!'
+        ], 200);
     }
+
 
     public function destroy($id)
     {
